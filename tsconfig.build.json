@@ -1,0 +1,15 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "forceConsistentCasingInFileNames": true
+  },
+  "include": ["src"],
+  "exclude": [
+    "node_modules",
+    "src/components/viewer/__tests__",
+    "src/components/viewer/animations/__tests__",
+    "src/components/viewer/utils/__tests__",
+    "src/shared/utils/renderMetrics.baseline.test.tsx",
+    "src/shared/utils/renderProfiler.test.tsx"
+  ]
+}

@@ -1,0 +1,42 @@
+.ik-controller-debug {
+  background: rgba(0, 0, 0, 0.8);
+  color: #00ff00;
+  padding: 10px;
+  border-radius: 5px;
+  font-family: monospace;
+  font-size: 11px;
+  min-width: 300px;
+}
+
+.ik-controller-debug__header {
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.ik-controller-debug__status + .ik-controller-debug__status {
+  margin-top: 2px;
+}
+
+.ik-controller-debug__violations {
+  color: #ff6600;
+  margin-top: 6px;
+}
+
+.ik-controller-debug__selected {
+  margin-top: 8px;
+  border-top: 1px solid #00ff00;
+  padding-top: 5px;
+}
+
+.ik-controller-debug__chain,
+.ik-controller-debug__hover {
+  font-size: 10px;
+}
+
+.ik-controller-debug__chain {
+  color: #888;
+}
+
+.ik-controller-debug__hover {
+  color: #ffff00;
+}
