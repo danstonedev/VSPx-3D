@@ -30,10 +30,10 @@ export function clearConstraintReferencePose(): void {
 
 function getRestQuaternion(bone: THREE.Bone): THREE.Quaternion {
   const cached = constraintReferencePose.get(bone.name);
-  if (cached) return cached;
-  const fresh = bone.quaternion.clone();
-  constraintReferencePose.set(bone.name, fresh);
-  return fresh;
+  if (!cached) {
+    throw new Error(`❌ No constraint reference pose for ${bone.name}. Must call captureConstraintReferencePose() with skeleton in T-pose first!`);
+  }
+  return cached;
 }
 
 export function getRelativeEuler(bone: THREE.Bone): THREE.Euler {

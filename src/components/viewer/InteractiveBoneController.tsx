@@ -19,6 +19,7 @@ import {
   type IKChainConfig 
 } from './utils/ikSolverConfig';
 import { captureConstraintReferencePose, clearConstraintReferencePose, validateRotation, type ConstraintViolation } from './constraints/constraintValidator';
+import { hasConstraint } from './constraints/jointConstraints';
 import { getConstraintForBone } from './constraints/jointConstraints';
 import { capturePoseSnapshot, diffPoseSnapshots, formatPoseDeltas, type PoseSnapshot } from './utils/skeletonDiagnostics';
 import './InteractiveBoneController.css'
@@ -223,6 +224,12 @@ ${formatPoseDeltas(deltas)}`);
             scale: bone.scale.clone()
           });
         });
+        
+        // IMMEDIATELY capture constraint reference from this TRUE T-POSE
+        // This must happen NOW before any animations or IK operations
+        console.log('📐 Capturing constraint reference pose from TRUE anatomical T-pose...');
+        captureConstraintReferencePose(skeleton);
+        console.log(`✅ Constraint reference locked to anatomical T-pose (${skeleton.bones.filter(b => hasConstraint(b.name)).length} bones)`);
       }
       
       // Now restore to that bind pose (in case animations were playing)
@@ -300,10 +307,8 @@ ${formatPoseDeltas(deltas)}`);
       
       setIkTargets(targets);
       setIsReady(true);
-      captureConstraintReferencePose(skeleton);
       restPoseSnapshotRef.current = capturePoseSnapshot(skeleton);
-      restPoseSnapshotRef.current = capturePoseSnapshot(skeleton);
-      console.log('✅ Captured IK rest pose (normalized T-pose, excluding targets)');
+      console.log('✅ IK Controller ready (constraint reference already locked to T-pose)');
       
       console.log(`✅ IK Controller ready: ${iks.length} chains, ${targets.size} targets`);
       
@@ -344,7 +349,9 @@ ${formatPoseDeltas(deltas)}`);
         skeleton.bones.forEach(b => b.updateMatrixWorld(true));
       }
       
-      captureConstraintReferencePose(skeleton);
+      // NOTE: Do NOT recapture constraint reference pose here!
+      // The constraint reference is IMMUTABLE and was locked to the anatomical T-pose at initialization.
+      // Recapturing would pollute it with any accumulated drift or manual adjustments.
       restPoseSnapshotRef.current = capturePoseSnapshot(skeleton);
       
       // Re-sync all IK targets to their effector positions
