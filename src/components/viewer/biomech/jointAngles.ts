@@ -183,6 +183,15 @@ export const JOINT_CONFIGS: JointConfig[] = [
  */
 const jointNeutralRelativeQuat = new Map<string, THREE.Quaternion>();
 
+/**
+ * Global cache storing the neutral T-pose quaternion for EVERY bone in the skeleton.
+ * This ensures we have reference data for all bones, not just the predefined joints.
+ * 
+ * Key: bone.name
+ * Value: World-space quaternion of the bone in T-pose
+ */
+const boneNeutralWorldQuat = new Map<string, THREE.Quaternion>();
+
 function jointKey(id: BiomechJointId, side: JointSide): string {
   return `${id}:${side}`;
 }
@@ -230,10 +239,24 @@ export function computeJointRelativeQuaternion(
  * 
  * CRITICAL: This must be called AFTER the skeleton is loaded and in T-pose,
  * at the same time as captureConstraintReferencePose().
+ * 
+ * This function captures TWO levels of neutral pose data:
+ * 1. Joint-relative quaternions for the predefined biomech joints (hip, knee, etc.)
+ * 2. World-space quaternions for ALL bones in the skeleton
  */
 export function captureJointNeutralPose(skeleton: THREE.Skeleton): void {
   jointNeutralRelativeQuat.clear();
+  boneNeutralWorldQuat.clear();
 
+  // 1. Capture world-space neutral pose for ALL bones
+  skeleton.bones.forEach(bone => {
+    bone.updateWorldMatrix(true, false);
+    const worldQuat = new THREE.Quaternion();
+    bone.getWorldQuaternion(worldQuat);
+    boneNeutralWorldQuat.set(bone.name, worldQuat.clone());
+  });
+
+  // 2. Capture joint-relative neutral pose for predefined biomech joints
   for (const cfg of JOINT_CONFIGS) {
     const prox = findBoneByName(skeleton, cfg.proximalBoneName);
     const dist = findBoneByName(skeleton, cfg.distalBoneName);
@@ -247,7 +270,7 @@ export function captureJointNeutralPose(skeleton: THREE.Skeleton): void {
     jointNeutralRelativeQuat.set(jointKey(cfg.id, cfg.side), rel);
   }
   
-  console.log(`✅ Captured biomech neutral pose for ${jointNeutralRelativeQuat.size} joints`);
+  console.log(`✅ Captured biomech neutral pose: ${boneNeutralWorldQuat.size} bones, ${jointNeutralRelativeQuat.size} predefined joints`);
 }
 
 /**
@@ -256,6 +279,7 @@ export function captureJointNeutralPose(skeleton: THREE.Skeleton): void {
  */
 export function clearJointNeutralPose(): void {
   jointNeutralRelativeQuat.clear();
+  boneNeutralWorldQuat.clear();
 }
 
 /**
@@ -263,6 +287,31 @@ export function clearJointNeutralPose(): void {
  */
 export function hasNeutralPose(id: BiomechJointId, side: JointSide): boolean {
   return jointNeutralRelativeQuat.has(jointKey(id, side));
+}
+
+/**
+ * Check if neutral pose has been captured for a specific bone.
+ */
+export function hasBoneNeutralPose(boneName: string): boolean {
+  return boneNeutralWorldQuat.has(boneName);
+}
+
+/**
+ * Get the neutral world-space quaternion for a bone.
+ * Returns undefined if not captured.
+ */
+export function getBoneNeutralWorldQuat(boneName: string): THREE.Quaternion | undefined {
+  return boneNeutralWorldQuat.get(boneName);
+}
+
+/**
+ * Get the count of captured neutral poses.
+ */
+export function getNeutralPoseCounts(): { bones: number; joints: number } {
+  return {
+    bones: boneNeutralWorldQuat.size,
+    joints: jointNeutralRelativeQuat.size,
+  };
 }
 
 /**
