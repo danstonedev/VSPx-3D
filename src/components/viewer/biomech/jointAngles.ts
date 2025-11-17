@@ -46,6 +46,22 @@ export interface BiomechJointAngles {
 }
 
 /**
+ * Offset in degrees to convert from T-pose to true anatomical neutral.
+ * T-pose is a rigging convenience, NOT anatomical neutral.
+ * 
+ * Example: Shoulder in T-pose has ~90° abduction. To get anatomical neutral
+ * (arms at sides = 0° abduction), we need to subtract 90° from the abd/add axis.
+ */
+export interface TPoseOffset {
+  /** Offset for flexion/extension axis (degrees) */
+  flexExt: number;
+  /** Offset for abduction/adduction axis (degrees) */
+  abdAdd: number;
+  /** Offset for internal/external rotation axis (degrees) */
+  rotation: number;
+}
+
+/**
  * Configuration for a biomechanical joint, defining which bones
  * constitute proximal and distal segments and how to decompose
  * their relative orientation.
@@ -57,6 +73,12 @@ export interface JointConfig {
   distalBoneName: string;
   /** Euler order used to decompose the joint-relative quaternion */
   eulerOrder: THREE.EulerOrder;
+  /**
+   * Optional T-pose offset: the angular difference between T-pose and anatomical neutral.
+   * If provided, biomech angles will be corrected so that anatomical neutral reads 0°.
+   * If omitted, T-pose is assumed to BE anatomical neutral (e.g., for legs/knees).
+   */
+  tPoseOffset?: TPoseOffset;
 }
 
 /**
@@ -140,12 +162,23 @@ export const JOINT_CONFIGS: JointConfig[] = [
   // - Flexion: ~180°, Extension: ~60°
   // - Abduction: ~180°, Adduction: ~30-40° across midline
   // - Internal rotation: ~70-90°, External rotation: ~90°
+  //
+  // T-POSE OFFSET CORRECTION:
+  // In T-pose, arms are abducted ~90° from anatomical neutral (arms at sides).
+  // We need to subtract this offset so anatomical neutral reads 0°.
+  // Based on logged T-pose angles: RightArm x=56.5° y=-27.3° z=8.7°
+  // Approximate offset: ~90° abduction (Y-axis in XYZ Euler order)
   {
     id: 'shoulder',
     side: 'left',
     proximalBoneName: 'mixamorig1Spine2',      // or mixamorig1LeftShoulder if preferred
     distalBoneName: 'mixamorig1LeftArm',
     eulerOrder: 'XYZ',
+    tPoseOffset: {
+      flexExt: 0,      // T-pose arms are roughly in frontal plane (no flex/ext offset)
+      abdAdd: -90,     // T-pose = 90° abducted; subtract to make neutral = 0°
+      rotation: 0,     // Minimal rotation offset in T-pose
+    },
   },
   {
     id: 'shoulder',
@@ -153,6 +186,11 @@ export const JOINT_CONFIGS: JointConfig[] = [
     proximalBoneName: 'mixamorig1Spine2',
     distalBoneName: 'mixamorig1RightArm',
     eulerOrder: 'XYZ',
+    tPoseOffset: {
+      flexExt: 0,
+      abdAdd: -90,     // T-pose = 90° abducted; subtract to make neutral = 0°
+      rotation: 0,
+    },
   },
 
   // ==================== ELBOWS ====================
@@ -344,12 +382,20 @@ export function quaternionToJointEuler(
 export function mapEulerToBiomech(
   jointId: BiomechJointId,
   side: JointSide,
-  euler: THREE.Euler
+  euler: THREE.Euler,
+  tPoseOffset?: TPoseOffset
 ): BiomechJointAngles {
   // Base mapping for now. Customize per joint/side if needed.
-  let flexExt = euler.x;
-  let rotation = euler.y;
-  let abdAdd = euler.z;
+  let flexExt = deg(euler.x);
+  let abdAdd = deg(euler.z);
+  let rotation = deg(euler.y);
+
+  // Apply T-pose offset correction to convert from T-pose to anatomical neutral
+  if (tPoseOffset) {
+    flexExt += tPoseOffset.flexExt;
+    abdAdd += tPoseOffset.abdAdd;
+    rotation += tPoseOffset.rotation;
+  }
 
   // Example: For right side joints, you *might* want to flip frontal-plane sign.
   // Uncomment/tune after visual QA:
@@ -366,9 +412,9 @@ export function mapEulerToBiomech(
   void side;
 
   return {
-    flexExt: deg(flexExt),
-    abdAdd: deg(abdAdd),
-    rotation: deg(rotation),
+    flexExt,
+    abdAdd,
+    rotation,
   };
 }
 
@@ -404,7 +450,7 @@ export function computeBiomechAnglesForConfig(
   const qDelta = qNeutral.clone().invert().multiply(qRel);
 
   const euler = quaternionToJointEuler(qDelta, cfg.eulerOrder);
-  return mapEulerToBiomech(cfg.id, cfg.side, euler);
+  return mapEulerToBiomech(cfg.id, cfg.side, euler, cfg.tPoseOffset);
 }
 
 /**
