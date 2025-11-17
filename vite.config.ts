@@ -8,6 +8,7 @@ const __dirname = dirname(__filename)
 
 export default defineConfig({
   plugins: [react()],
+  base: '/VSPx-3D/',  // GitHub Pages base path
   resolve: {
     alias: {
       '@': resolve(__dirname, './src')
