@@ -222,14 +222,15 @@ const V2Model = forwardRef<PlaybackAPI | null, V2ModelProps>(function V2Model(
         <primitive object={root} />
       </group>
       
-      {ikMode && skinnedMesh && skeleton && skeletonRoot && (
+      {skinnedMesh && skeleton && skeletonRoot && (
         <InteractiveBoneController
           skinnedMesh={skinnedMesh}
           skeleton={skeleton}
           skeletonRoot={skeletonRoot}
-          enabled={true}
+          enabled={ikMode} // Only enable IK drag in IK mode
+          playbackMode={!ikMode} // Enable joint selection for ROM tracking in playback mode
           showVisualFeedback={true}
-          showDebugInfo={true}
+          showDebugInfo={ikMode} // Only show IK chain debug lines in IK mode
           constraintsEnabled={constraintsEnabled}
           onBoneSelect={onBoneSelect}
           onConstraintViolation={onConstraintViolation}

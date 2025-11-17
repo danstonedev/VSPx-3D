@@ -7,6 +7,7 @@
 
 import * as THREE from 'three';
 import { getConstraintForBone, RotationLimits, JointConstraint, hasConstraint } from './jointConstraints';
+import { relativeToAnatomical } from './angleConversion';
 
 export type ConstraintViolation = {
   boneName: string;
@@ -39,8 +40,35 @@ function getRestQuaternion(bone: THREE.Bone): THREE.Quaternion {
 export function getRelativeEuler(bone: THREE.Bone): THREE.Euler {
   const restQuat = getRestQuaternion(bone);
   const restInverse = restQuat.clone().invert();
-  const relativeQuat = restInverse.multiply(bone.quaternion.clone());
+  // Calculate relative rotation: restInverse * current
+  // IMPORTANT: multiplyQuaternions creates new result, multiply() modifies in-place
+  const relativeQuat = new THREE.Quaternion().multiplyQuaternions(restInverse, bone.quaternion);
   return new THREE.Euler().setFromQuaternion(relativeQuat, 'XYZ');
+}
+
+/**
+ * Get anatomical angles (relative to true anatomical neutral, not T-pose)
+ * 
+ * Uses the angleConversion module for clear, testable coordinate transformation.
+ * 
+ * @param bone - The bone to measure
+ * @returns Euler angles in anatomical reference frame (in radians)
+ */
+export function getAnatomicalEuler(bone: THREE.Bone): THREE.Euler {
+  const relativeEuler = getRelativeEuler(bone);
+  const constraint = getConstraintForBone(bone.name);
+  
+  // Check for new tPoseOffset field first, fall back to deprecated anatomicalNeutral
+  const tPoseOffset = constraint?.tPoseOffset || constraint?.anatomicalNeutral;
+  
+  if (!constraint || !tPoseOffset) {
+    // No T-pose offset defined = T-pose IS anatomical neutral
+    // Return relative angles directly as anatomical angles
+    return relativeEuler;
+  }
+  
+  // Use angleConversion module for clear transformation
+  return relativeToAnatomical(relativeEuler, tPoseOffset);
 }
 
 export function setRelativeEuler(

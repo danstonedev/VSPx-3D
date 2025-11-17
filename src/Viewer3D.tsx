@@ -178,7 +178,8 @@ function Viewer3DContents({ animationOptions }: Viewer3DContentsProps) {
           <div className="viewer-panel__hint viewer-panel__hint--spaced">
             <strong>🎯 Interactive IK Mode</strong>
             <ul>
-              <li>Click and drag any bone to pose</li>
+              <li>Click and drag orange/green balls to pose</li>
+              <li><strong>Shift+click</strong> purple joints to inspect ROM</li>
               <li>See Range of Motion panel (top-right)</li>
               <li>Constraints prevent impossible poses</li>
               <li>Collision warnings show in red</li>
@@ -190,6 +191,18 @@ function Viewer3DContents({ animationOptions }: Viewer3DContentsProps) {
             >
               Reset to T-Pose
             </button>
+          </div>
+        )}
+
+        {!ikMode && (
+          <div className="viewer-panel__hint viewer-panel__hint--spaced">
+            <strong>📊 Live ROM Tracking</strong>
+            <ul>
+              <li>Click <strong className="cyan-text">cyan spheres</strong> to select joints</li>
+              <li>Watch Range of Motion update live during animation</li>
+              <li>Track hip, knee, shoulder, elbow angles in real-time</li>
+              <li>Educational tool for biomechanics students</li>
+            </ul>
           </div>
         )}
 
