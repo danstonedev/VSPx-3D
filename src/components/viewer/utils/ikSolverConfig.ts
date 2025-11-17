@@ -6,7 +6,6 @@
  */
 
 import * as THREE from 'three';
-import { getConstraintForBone } from '../constraints/jointConstraints';
 
 /**
  * IK chain definition for CCDIKSolver

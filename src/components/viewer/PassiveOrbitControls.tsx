@@ -13,7 +13,9 @@ export const PassiveOrbitControls = forwardRef<OrbitControlsImpl, React.Componen
 
     const attachRef = (instance: OrbitControlsImpl | null) => {
       if (!instance || patchedInstances.has(instance)) {
-        controlsRef.current = instance
+        if (controlsRef.current !== instance) {
+          (controlsRef as any).current = instance
+        }
         return
       }
 
@@ -44,7 +46,7 @@ export const PassiveOrbitControls = forwardRef<OrbitControlsImpl, React.Componen
       }
 
       patchedInstances.add(instance)
-      controlsRef.current = instance
+      ;(controlsRef as any).current = instance
     }
 
     useImperativeHandle(ref, () => controlsRef.current!, [])
