@@ -149,6 +149,76 @@
   line-height: 1.4;
 }
 
+/* Composite Shoulder Motion Analysis */
+.composite-shoulder-info {
+  margin: 15px 0;
+  padding: 12px;
+  background: linear-gradient(135deg, rgba(138, 43, 226, 0.15), rgba(75, 0, 130, 0.15));
+  border: 1px solid rgba(138, 43, 226, 0.4);
+  border-radius: 6px;
+}
+
+.composite-shoulder-info h5 {
+  margin: 0 0 8px 0;
+  font-size: 13px;
+  color: #da70d6;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.shoulder-explanation {
+  font-size: 11px;
+  color: #d8bfd8;
+  margin: 0 0 12px 0;
+  line-height: 1.4;
+  font-style: italic;
+}
+
+.composite-breakdown {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.composite-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 0;
+}
+
+.composite-row.component-detail {
+  padding-left: 12px;
+  font-size: 12px;
+}
+
+.component-label {
+  color: #e6e6fa;
+  font-size: 12px;
+}
+
+.component-value {
+  color: #ffffff;
+  font-weight: bold;
+  font-size: 13px;
+  font-family: 'Courier New', monospace;
+}
+
+.component-value.composite-total {
+  color: #ff69b4;
+  font-size: 16px;
+}
+
+.rhythm-note {
+  margin: 10px 0 0 0;
+  padding: 8px;
+  background: rgba(138, 43, 226, 0.2);
+  border-left: 3px solid #da70d6;
+  font-size: 11px;
+  color: #e6e6fa;
+  line-height: 1.4;
+}
+
 /* Joint Angles */
 .joint-angles {
   margin: 15px 0;
@@ -159,6 +229,93 @@
   font-size: 13px;
   color: #00ff00;
   text-transform: uppercase;
+}
+
+/* Biomechanical Angles (Teaching Display) */
+.biomech-angles {
+  margin: 20px 0;
+  padding: 15px;
+  background: linear-gradient(135deg, rgba(0, 100, 200, 0.15), rgba(0, 150, 100, 0.15));
+  border: 2px solid rgba(0, 200, 150, 0.4);
+  border-radius: 8px;
+}
+
+.biomech-angles h5 {
+  margin: 0 0 10px 0;
+  font-size: 14px;
+  color: #00ffaa;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.biomech-explanation {
+  font-size: 11px;
+  color: #b0e0e6;
+  margin: 0 0 15px 0;
+  line-height: 1.5;
+  padding: 10px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 4px;
+  border-left: 3px solid #00ffaa;
+}
+
+.biomech-explanation strong {
+  color: #00ffcc;
+}
+
+.biomech-angle-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 12px 0;
+}
+
+.biomech-angle-row {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+  gap: 12px;
+  padding: 10px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 4px;
+  border: 1px solid rgba(0, 200, 150, 0.2);
+}
+
+.biomech-label {
+  color: #00ffcc;
+  font-weight: 600;
+  font-size: 12px;
+  text-transform: capitalize;
+}
+
+.biomech-value {
+  color: #ffffff;
+  font-size: 16px;
+  font-weight: bold;
+  font-family: 'Courier New', monospace;
+  padding: 4px 12px;
+  background: rgba(0, 255, 170, 0.15);
+  border-radius: 4px;
+  min-width: 60px;
+  text-align: center;
+}
+
+.biomech-note {
+  color: #90ee90;
+  font-size: 11px;
+  font-style: italic;
+  min-width: 80px;
+  text-align: right;
+}
+
+.biomech-footer {
+  margin: 12px 0 0 0;
+  padding: 10px;
+  background: rgba(0, 200, 150, 0.1);
+  border-left: 3px solid #00ffaa;
+  font-size: 10px;
+  color: #b0e0e6;
+  line-height: 1.5;
 }
 
 .angle-row {
@@ -242,6 +399,186 @@
 @keyframes pulse {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.6; }
+}
+
+/* Linear Scale Visualization for PT-Friendly ROM Display */
+.angle-row-scale {
+  margin: 18px 0;
+  padding: 12px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 6px;
+  border: 1px solid rgba(0, 255, 255, 0.15);
+}
+
+.movement-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.axis-label {
+  color: #00ffff;
+  font-weight: bold;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.angle-value {
+  color: #ffffff;
+  font-size: 16px;
+  font-weight: bold;
+  padding: 2px 8px;
+  background: rgba(0, 255, 255, 0.1);
+  border-radius: 4px;
+}
+
+.linear-scale {
+  position: relative;
+  height: 50px;
+  margin: 10px 0;
+}
+
+.scale-track {
+  position: relative;
+  display: flex;
+  height: 30px;
+  background: linear-gradient(90deg, 
+    rgba(255, 100, 100, 0.2) 0%, 
+    rgba(50, 50, 50, 0.3) 48%, 
+    rgba(50, 50, 50, 0.3) 52%, 
+    rgba(100, 255, 100, 0.2) 100%
+  );
+  border-radius: 15px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  overflow: visible;
+}
+
+.scale-half {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 10px;
+  font-size: 10px;
+}
+
+.scale-left {
+  justify-content: flex-start;
+}
+
+.scale-right {
+  justify-content: flex-end;
+}
+
+.scale-label {
+  color: #cccccc;
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 9px;
+  letter-spacing: 0.3px;
+}
+
+.scale-limit {
+  color: #999999;
+  font-size: 9px;
+  font-family: monospace;
+}
+
+.scale-center {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  height: 100%;
+  width: 2px;
+  background: rgba(255, 255, 255, 0.5);
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.neutral-marker {
+  position: absolute;
+  top: -20px;
+  background: rgba(255, 255, 255, 0.9);
+  color: #000000;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 10px;
+  font-weight: bold;
+  white-space: nowrap;
+}
+
+.position-indicator {
+  position: absolute;
+  top: 0;
+  height: 30px;
+  width: 0;
+  transform: translateX(-50%);
+  z-index: 3;
+  pointer-events: none;
+}
+
+.indicator-dot {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 16px;
+  height: 16px;
+  background: #00ffff;
+  border: 3px solid #ffffff;
+  border-radius: 50%;
+  box-shadow: 0 0 10px rgba(0, 255, 255, 0.8), 0 0 20px rgba(0, 255, 255, 0.4);
+  animation: pulse-dot 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse-dot {
+  0%, 100% { 
+    transform: translate(-50%, -50%) scale(1); 
+    box-shadow: 0 0 10px rgba(0, 255, 255, 0.8), 0 0 20px rgba(0, 255, 255, 0.4);
+  }
+  50% { 
+    transform: translate(-50%, -50%) scale(1.1); 
+    box-shadow: 0 0 15px rgba(0, 255, 255, 1), 0 0 30px rgba(0, 255, 255, 0.6);
+  }
+}
+
+.scale-fill {
+  position: absolute;
+  top: 0;
+  height: 30px;
+  background: linear-gradient(90deg, 
+    rgba(0, 255, 255, 0.3), 
+    rgba(0, 255, 255, 0.5)
+  );
+  border-radius: 15px;
+  transition: all 0.2s ease;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.utilization-info {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 8px;
+  font-size: 11px;
+}
+
+.util-label {
+  color: #999999;
+}
+
+.util-value {
+  color: #00ff00;
+  font-weight: bold;
+}
+
+.util-value.warning {
+  color: #ff9900;
+  animation: pulse 1s infinite;
 }
 
 /* Rotation Limits */

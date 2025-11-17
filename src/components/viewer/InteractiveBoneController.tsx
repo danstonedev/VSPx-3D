@@ -19,10 +19,15 @@ import {
   type IKChainConfig 
 } from './utils/ikSolverConfig';
 import { captureConstraintReferencePose, clearConstraintReferencePose, validateRotation, type ConstraintViolation } from './constraints/constraintValidator';
+import { captureJointNeutralPose, clearJointNeutralPose } from './biomech/jointAngles';
 import { hasConstraint } from './constraints/jointConstraints';
 import { getConstraintForBone } from './constraints/jointConstraints';
 import { capturePoseSnapshot, diffPoseSnapshots, formatPoseDeltas, type PoseSnapshot } from './utils/skeletonDiagnostics';
 import './InteractiveBoneController.css'
+
+// Global feature flag to table IK end-to-end without removing code paths
+// When false, no IK targets or solvers are created and the skeleton remains unchanged
+const IK_FEATURE_ENABLED = false;
 
 export interface InteractiveBoneControllerProps {
   skinnedMesh: THREE.SkinnedMesh;
@@ -32,6 +37,7 @@ export interface InteractiveBoneControllerProps {
   showVisualFeedback?: boolean;
   showDebugInfo?: boolean;
   constraintsEnabled?: boolean;
+  playbackMode?: boolean; // New: enables joint selection during animation playback for live ROM tracking
   onBoneSelect?: (bone: THREE.Bone | null) => void;
   onConstraintViolation?: (violations: ConstraintViolation[]) => void;
   onDragStart?: (bone: THREE.Bone, plane: THREE.Plane) => void;
@@ -78,6 +84,7 @@ export default function InteractiveBoneController({
   showVisualFeedback = true,
   showDebugInfo = false,
   constraintsEnabled = true,
+  playbackMode = false,
   onBoneSelect,
   onConstraintViolation,
   onDragStart,
@@ -90,6 +97,7 @@ export default function InteractiveBoneController({
   const [ikHelper, setIkHelper] = useState<CCDIKHelper | null>(null);
   const [ikTargets, setIkTargets] = useState<Map<string, THREE.Bone>>(new Map());
   const [isReady, setIsReady] = useState(false);
+  const [isShiftHeld, setIsShiftHeld] = useState(false);
   const bindPoseRef = useRef<Map<string, { position: THREE.Vector3; quaternion: THREE.Quaternion; scale: THREE.Vector3 }>>(new Map());
   const ikRestPoseRef = useRef<Map<string, { position: THREE.Vector3; quaternion: THREE.Quaternion; scale: THREE.Vector3 }>>(new Map());
   // Note: constraintBindPoseRef removed - now using shared constraintReferencePose from constraintValidator.ts
@@ -184,8 +192,69 @@ ${formatPoseDeltas(deltas)}`);
     return true;
   }, [skeleton, skinnedMesh]);
 
+  // ALWAYS capture constraint reference pose (needed for ROM panel in both modes)
+  useEffect(() => {
+    if (!skeleton || bindPoseRef.current.size > 0) return;
+    
+    console.log('📸 Capturing initial bind pose and constraint reference...');
+    skeleton.bones.forEach((bone) => {
+      bindPoseRef.current.set(bone.uuid, {
+        position: bone.position.clone(),
+        quaternion: bone.quaternion.clone(),
+        scale: bone.scale.clone()
+      });
+    });
+    
+    // Capture constraint reference from clean T-pose
+    console.log('📐 Capturing constraint reference pose from anatomical T-pose...');
+    captureConstraintReferencePose(skeleton);
+    console.log(`✅ Constraint reference locked (${skeleton.bones.filter(b => hasConstraint(b.name)).length} bones)`);
+    
+    // Capture biomech neutral pose for teaching-oriented joint angles
+    console.log('🔬 Capturing biomech neutral pose for joint coordinate systems...');
+    captureJointNeutralPose(skeleton);
+    console.log('✅ Biomech neutral pose captured for teaching angles');
+    
+    // DIAGNOSTIC: Check actual T-pose rotations for key joints to verify axis conventions
+    console.log('🔍 T-POSE EULER ANGLES (for axis convention verification):');
+    
+    const diagnosticBones = [
+      'mixamorig1RightArm',
+      'mixamorig1LeftArm',
+      'mixamorig1RightForeArm',
+      'mixamorig1LeftForeArm',
+      'mixamorig1RightUpLeg',
+      'mixamorig1LeftUpLeg',
+      'mixamorig1RightLeg',
+      'mixamorig1LeftLeg'
+    ];
+    
+    diagnosticBones.forEach(boneName => {
+      const bone = skeleton.bones.find(b => b.name === boneName);
+      if (bone) {
+        const euler = new THREE.Euler().setFromQuaternion(bone.quaternion, 'XYZ');
+        console.log(`  ${boneName}: x=${THREE.MathUtils.radToDeg(euler.x).toFixed(1)}° y=${THREE.MathUtils.radToDeg(euler.y).toFixed(1)}° z=${THREE.MathUtils.radToDeg(euler.z).toFixed(1)}°`);
+      }
+    });
+    
+    // Mark as ready so playback mode joint spheres appear on initial load
+    setIsReady(true);
+    
+    return () => {
+      clearConstraintReferencePose();
+      clearJointNeutralPose();
+    };
+  }, [skeleton]);
+
+  // IK system initialization (only in IK mode when enabled=true)
   useEffect(() => {
     if (!skeleton || !skeletonRoot || !enabled) return;
+    if (!IK_FEATURE_ENABLED) {
+      console.log('🧰 IK feature is disabled (tabled). Skipping IK setup and leaving skeleton intact.');
+      // Ensure UI dependent on readiness can still function
+      setIsReady(true);
+      return;
+    }
     
     try {
       console.log('🎯 Initializing Interactive Bone Controller...');
@@ -211,41 +280,22 @@ ${formatPoseDeltas(deltas)}`);
       skeleton.bones.forEach(b => b.updateMatrixWorld(true));
       skinnedMesh.updateMatrixWorld(true);
 
-      // CRITICAL FIX: Reset to clean T-pose BEFORE capturing anything
-      // If user was playing animations, bones are in animated poses
-      // First, capture the bind pose if not already done (from current state)
-      // This happens on first load when skeleton is in T-pose
-      if (bindPoseRef.current.size === 0) {
-        console.log('📸 Capturing initial bind pose from model T-pose...');
+      // Reset to bind T-pose if bindPose was already captured
+      // (Constraint reference was already captured in the always-run effect above)
+      if (bindPoseRef.current.size > 0) {
+        console.log('🔄 Resetting skeleton to bind T-pose before IK setup...');
         skeleton.bones.forEach((bone) => {
-          bindPoseRef.current.set(bone.uuid, {
-            position: bone.position.clone(),
-            quaternion: bone.quaternion.clone(),
-            scale: bone.scale.clone()
-          });
+          const snapshot = bindPoseRef.current.get(bone.uuid);
+          if (snapshot) {
+            bone.position.copy(snapshot.position);
+            bone.quaternion.copy(snapshot.quaternion);
+            bone.scale.copy(snapshot.scale);
+          }
         });
-        
-        // IMMEDIATELY capture constraint reference from this TRUE T-POSE
-        // This must happen NOW before any animations or IK operations
-        console.log('📐 Capturing constraint reference pose from TRUE anatomical T-pose...');
-        captureConstraintReferencePose(skeleton);
-        console.log(`✅ Constraint reference locked to anatomical T-pose (${skeleton.bones.filter(b => hasConstraint(b.name)).length} bones)`);
+        skeleton.bones.forEach(b => b.updateMatrixWorld(true));
+        skinnedMesh.updateMatrixWorld(true);
+        console.log('✅ Skeleton reset to bind T-pose');
       }
-      
-      // Now restore to that bind pose (in case animations were playing)
-      console.log('🔄 Resetting skeleton to bind T-pose before IK setup...');
-      skeleton.bones.forEach((bone) => {
-        const snapshot = bindPoseRef.current.get(bone.uuid);
-        if (snapshot) {
-          bone.position.copy(snapshot.position);
-          bone.quaternion.copy(snapshot.quaternion);
-          bone.scale.copy(snapshot.scale);
-        }
-      });
-      skeleton.bones.forEach(b => b.updateMatrixWorld(true));
-      skinnedMesh.updateMatrixWorld(true);
-      
-      console.log('✅ Skeleton reset to bind T-pose');
 
       // CRITICAL: Capture bind pose FIRST - this is NOW the clean T-pose after reset
       // This must happen before ANY other operations that might modify bone transforms
@@ -317,15 +367,25 @@ ${formatPoseDeltas(deltas)}`);
     }
     
     return () => {
-      // Cleanup
+      // Cleanup IK-specific resources only
       if (ikHelper) {
         skeletonRoot.remove(ikHelper);
         ikHelper.dispose();
+        setIkHelper(null);
       }
-      bindPoseRef.current.clear();
-      clearConstraintReferencePose();
+      // Note: bindPoseRef and constraint reference are cleaned up by the always-run effect
     };
   }, [skeleton, skeletonRoot, skinnedMesh, enabled, showDebugInfo, captureBindPose]);
+
+  // Remove IK helper when switching back to playback mode
+  useEffect(() => {
+    if (playbackMode && ikHelper && skeletonRoot) {
+      console.log('🧹 Removing IK debug helper (switched to playback mode)');
+      skeletonRoot.remove(ikHelper);
+      ikHelper.dispose();
+      setIkHelper(null);
+    }
+  }, [playbackMode, ikHelper, skeletonRoot]);
 
   // Reset to bind T-pose and move IK targets back to effectors
   const resetToBindPose = useCallback(() => {
@@ -395,6 +455,30 @@ ${formatPoseDeltas(deltas)}`);
     syncIKTargetsToEffectors();
   }, [isReady, syncIKTargetsToEffectors]);
   
+  // Find joint handle at pointer (for Shift+click inspection)
+  const findJointHandleAtPointer = useCallback((event: ThreeEvent<PointerEvent>): THREE.Bone | null => {
+    if (!jointHandleBones || jointHandleBones.length === 0) return null;
+    
+    const ray: THREE.Ray | null = (event as any).ray ?? null;
+    if (!ray) return null;
+    
+    const tmpWorld = new THREE.Vector3();
+    let closestJoint: THREE.Bone | null = null;
+    let closestDistance = 0.15; // Slightly larger click radius for joint handles
+    
+    // Check each joint handle
+    jointHandleBones.forEach((bone) => {
+      bone.getWorldPosition(tmpWorld);
+      const d = ray.distanceToPoint(tmpWorld);
+      if (d < closestDistance) {
+        closestDistance = d;
+        closestJoint = bone;
+      }
+    });
+    
+    return closestJoint;
+  }, [jointHandleBones]);
+  
   // Find IK target at pointer (raycast against target spheres, not bones)
   const findTargetAtPointer = useCallback((event: ThreeEvent<PointerEvent>): { target: THREE.Bone; chainName: string } | null => {
     if (!ikTargets || ikTargets.size === 0) return null;
@@ -434,6 +518,11 @@ ${formatPoseDeltas(deltas)}`);
   // Handle pointer down (start drag)
   const handlePointerDown = useCallback((event: ThreeEvent<PointerEvent>) => {
     if (!enabled || !isReady || !ikSolver) return;
+    
+    // If Shift is held, don't start IK drag - let JointHandle components handle their own clicks
+    if (event.nativeEvent.shiftKey || isShiftHeld) {
+      return; // JointHandle will stop propagation after handling selection
+    }
     
     // Find which IK target was clicked
     const targetInfo = findTargetAtPointer(event);
@@ -484,7 +573,7 @@ ${formatPoseDeltas(deltas)}`);
     
     console.log(`🎯 Started dragging IK target: ${chainName}`);
     
-  }, [enabled, isReady, ikSolver, ikTargets, skeleton, findTargetAtPointer, calculateDragPlane, onBoneSelect, onDragStart]);
+  }, [enabled, isReady, ikSolver, ikTargets, skeleton, isShiftHeld, findTargetAtPointer, findJointHandleAtPointer, calculateDragPlane, onBoneSelect, onDragStart]);
   
   // Handle pointer move (drag)
   const handlePointerMove = useCallback((event: ThreeEvent<PointerEvent>) => {
@@ -738,12 +827,32 @@ ${formatPoseDeltas(deltas)}`);
   useEffect(() => {
     if (dragStateRef.current.isDragging) {
       gl.domElement.style.cursor = 'grabbing';
+    } else if (hoverBone && isShiftHeld) {
+      gl.domElement.style.cursor = 'pointer'; // Pointer for inspection
     } else if (hoverBone) {
-      gl.domElement.style.cursor = 'grab';
+      gl.domElement.style.cursor = 'grab'; // Grab for IK drag
     } else {
       gl.domElement.style.cursor = 'default';
     }
-  }, [hoverBone, gl]);
+  }, [hoverBone, isShiftHeld, gl]);
+  
+  // Keyboard event listeners for Shift key
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Shift') setIsShiftHeld(true);
+    };
+    const handleKeyUp = (e: KeyboardEvent) => {
+      if (e.key === 'Shift') setIsShiftHeld(false);
+    };
+    
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
+    
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
+    };
+  }, []);
   
   // Continuous IK solving and constraint checking
   useFrame(() => {
@@ -776,24 +885,45 @@ ${formatPoseDeltas(deltas)}`);
       {/* Visual feedback */}
       {showVisualFeedback && (
         <>
-          {/* Render ALL IK target spheres (clickable) */}
-          {Array.from(ikTargets.entries()).map(([chainName, target]) => (
+          {/* IK targets only visible in IK mode */}
+          {!playbackMode && Array.from(ikTargets.entries()).map(([chainName, target]) => (
             <IKTargetSphere 
               key={chainName} 
               target={target} 
               isActive={dragStateRef.current.ikTarget === target}
+              size={0.12}
+              renderOrder={1000}
             />
           ))}
 
-          {jointHandleBones.map((bone) => (
-            <JointHandle
-              key={`joint-${bone.uuid}`}
-              bone={bone}
-              isSelected={highlightedBone?.uuid === bone.uuid}
-              onSelect={() => handleJointHandleSelect(bone)}
-              onHover={(hovering: boolean) => handleJointHandleHover(hovering ? bone : null)}
-            />
-          ))}
+          {/* Render joint handles based on mode */}
+          {playbackMode ? (
+            // Playback mode: cyan spheres for live ROM tracking during animation
+            jointHandleBones.map((bone) => (
+              <PlaybackJointHandle
+                key={`playback-joint-${bone.uuid}`}
+                bone={bone}
+                isSelected={highlightedBone?.uuid === bone.uuid}
+                onSelect={() => handleJointHandleSelect(bone)}
+                size={0.05}
+              />
+            ))
+          ) : (
+            // IK mode: purple spheres with Shift+click interaction
+            jointHandleBones.map((bone) => (
+              <JointHandle
+                key={`joint-${bone.uuid}`}
+                bone={bone}
+                isSelected={highlightedBone?.uuid === bone.uuid}
+                isShiftHeld={isShiftHeld}
+                onSelect={() => handleJointHandleSelect(bone)}
+                onHover={(hovering: boolean) => handleJointHandleHover(hovering ? bone : null)}
+                size={0.04}
+                opacity={0.65}
+                renderOrder={500}
+              />
+            ))
+          )}
           
           {highlightedBone && (
             <BoneHighlight bone={highlightedBone} color="#00ff00" size={0.06} />
@@ -886,10 +1016,14 @@ function BoneHighlight({
  */
 function IKTargetSphere({ 
   target, 
-  isActive 
+  isActive,
+  size = 0.12,
+  renderOrder = 1000
 }: { 
   target: THREE.Bone; 
   isActive: boolean;
+  size?: number;
+  renderOrder?: number;
 }) {
   const meshRef = useRef<THREE.Mesh>(null);
   
@@ -902,15 +1036,15 @@ function IKTargetSphere({
     
     // Pulse effect when active
     if (isActive) {
-      const scale = 0.08 + Math.sin(Date.now() * 0.006) * 0.02;
+      const scale = size + Math.sin(Date.now() * 0.006) * (size * 0.2);
       meshRef.current.scale.setScalar(scale);
     } else {
-      meshRef.current.scale.setScalar(0.08);
+      meshRef.current.scale.setScalar(size);
     }
   });
   
   return (
-    <mesh ref={meshRef}>
+    <mesh ref={meshRef} renderOrder={renderOrder}>
       <sphereGeometry args={[1, 16, 16]} />
       <meshStandardMaterial 
         color={isActive ? "#00ff00" : "#ffaa00"}
@@ -918,6 +1052,7 @@ function IKTargetSphere({
         emissiveIntensity={0.5}
         transparent 
         opacity={0.9}
+        depthTest={false}
       />
     </mesh>
   );
@@ -926,43 +1061,126 @@ function IKTargetSphere({
 type JointHandleProps = {
   bone: THREE.Bone;
   isSelected: boolean;
+  isShiftHeld: boolean;
   onSelect: () => void;
   onHover: (hovering: boolean) => void;
+  size?: number;
+  opacity?: number;
+  renderOrder?: number;
 };
 
-function JointHandle({ bone, isSelected, onSelect, onHover }: JointHandleProps) {
+function JointHandle({ 
+  bone, 
+  isSelected, 
+  isShiftHeld,
+  onSelect, 
+  onHover,
+  size = 0.04,
+  opacity = 0.65,
+  renderOrder = 500
+}: JointHandleProps) {
   const meshRef = useRef<THREE.Mesh>(null);
+  const [isHovered, setIsHovered] = useState(false);
 
   useFrame(() => {
     if (!meshRef.current) return;
     const worldPos = new THREE.Vector3();
     bone.getWorldPosition(worldPos);
     meshRef.current.position.copy(worldPos);
-    const scale = isSelected ? 0.075 : 0.055;
-    meshRef.current.scale.setScalar(scale);
+    
+    // Size feedback: larger when selected or when Shift+hover
+    let targetSize = size;
+    if (isSelected) {
+      targetSize = size * 1.5;
+    } else if (isHovered && isShiftHeld) {
+      targetSize = size * 1.3; // Grow when hovering with Shift
+    }
+    
+    meshRef.current.scale.setScalar(targetSize);
   });
 
   return (
     <mesh
       ref={meshRef}
-      onPointerDown={() => {
+      renderOrder={renderOrder}
+      onPointerDown={(e) => {
+        // Stop all propagation to prevent OrbitControls from activating
+        e.stopPropagation();
+        e.nativeEvent.stopPropagation();
+        e.nativeEvent.stopImmediatePropagation();
         onSelect();
       }}
       onPointerEnter={() => {
+        setIsHovered(true);
         onHover(true);
       }}
       onPointerLeave={() => {
+        setIsHovered(false);
         onHover(false);
       }}
     >
+      <sphereGeometry args={[1, 12, 12]} />
+      <meshStandardMaterial
+        color={isSelected ? "#00ff00" : (isHovered && isShiftHeld ? "#ffaa00" : "#aa00ff")}
+        emissive={isSelected ? "#00ff00" : (isHovered && isShiftHeld ? "#ff8800" : "#8800ff")}
+        emissiveIntensity={isSelected ? 0.5 : (isHovered && isShiftHeld ? 0.4 : 0.3)}
+        transparent
+        opacity={isSelected ? 0.85 : (isHovered && isShiftHeld ? 0.8 : opacity)}
+        depthTest={true}
+      />
+    </mesh>
+  );
+}
+
+// Playback mode joint handle - clickable spheres for ROM tracking during animation
+type PlaybackJointHandleProps = {
+  bone: THREE.Bone;
+  isSelected: boolean;
+  onSelect: () => void;
+  size?: number;
+};
+
+function PlaybackJointHandle({ bone, isSelected, onSelect, size = 0.05 }: PlaybackJointHandleProps) {
+  const meshRef = useRef<THREE.Mesh>(null);
+  const [isHovered, setIsHovered] = useState(false);
+
+  useFrame(() => {
+    if (!meshRef.current) return;
+    const worldPos = new THREE.Vector3();
+    bone.getWorldPosition(worldPos);
+    meshRef.current.position.copy(worldPos);
+    
+    // Scale feedback for selection and hover
+    let targetSize = size;
+    if (isSelected) {
+      targetSize = size * 1.5;
+    } else if (isHovered) {
+      targetSize = size * 1.2;
+    }
+    meshRef.current.scale.setScalar(targetSize);
+  });
+
+  return (
+    <mesh
+      ref={meshRef}
+      renderOrder={600}
+      onPointerDown={(e) => {
+        e.stopPropagation();
+        e.nativeEvent.stopPropagation();
+        e.nativeEvent.stopImmediatePropagation();
+        onSelect();
+      }}
+      onPointerEnter={() => setIsHovered(true)}
+      onPointerLeave={() => setIsHovered(false)}
+    >
       <sphereGeometry args={[1, 16, 16]} />
       <meshStandardMaterial
-        color={isSelected ? '#00bbff' : '#8888ff'}
-        emissive={isSelected ? '#00bbff' : '#4444ff'}
-        emissiveIntensity={0.6}
+        color={isSelected ? "#00ffff" : (isHovered ? "#66ddff" : "#00cccc")}
+        emissive={isSelected ? "#00ffff" : (isHovered ? "#00cccc" : "#008888")}
+        emissiveIntensity={isSelected ? 0.6 : (isHovered ? 0.4 : 0.3)}
         transparent
-        opacity={0.7}
-        depthTest={false}
+        opacity={isSelected ? 0.85 : 0.65}
+        depthTest={true}
       />
     </mesh>
   );

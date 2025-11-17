@@ -28,6 +28,8 @@ export interface JointConstraint {
   boneName: string;
   displayName: string;
   rotationLimits: RotationLimits;
+  tPoseOffset?: { x?: number; y?: number; z?: number }; // Where T-pose sits in anatomical space (in radians). Example: 57° means T-pose is 57° abducted
+  anatomicalNeutral?: { x?: number; y?: number; z?: number }; // DEPRECATED: Use tPoseOffset instead
   translationLock: boolean; // If true, bone position is locked, only rotation allowed
   enabled: boolean;
   degreesOfFreedom: number; // 1, 2, or 3
@@ -94,144 +96,168 @@ export const JOINT_CONSTRAINTS: Record<string, JointConstraint> = {
     boneName: 'mixamorig1Neck',
     displayName: 'Lower Neck (C7)',
     rotationLimits: {
-      x: [deg(-40), deg(40)],  // Nodding
-      y: [deg(-60), deg(60)],  // Head turn
-      z: [deg(-45), deg(45)]   // Side tilt
+      x: [deg(-45), deg(45)],  // Flexion/extension. Clinical (cervical combined): FLEX ~45°, EXT ~45-70°
+      y: [deg(-80), deg(80)],  // Rotation (head turn). Clinical: ~60-80° each side
+      z: [deg(-45), deg(45)]   // Lateral flexion. Clinical: ~45° each side (Physiopedia)
     },
     translationLock: true,
     enabled: true,
     degreesOfFreedom: 3,
-    notes: 'Cervical spine - high mobility'
+    notes: 'Cervical spine segment - high mobility compared to thoracic/lumbar. Clinical cervical ROM (combined): FLEX ~45°, EXT ~45-70°, ROT ~60-80°, LAT FLEX ~45°'
   },
   
   'mixamorig1Head': {
     boneName: 'mixamorig1Head',
     displayName: 'Head (Atlanto-occipital joint)',
     rotationLimits: {
-      x: [deg(-30), deg(50)],  // Nod yes
-      y: [deg(-75), deg(75)],  // Shake no
-      z: [deg(-40), deg(40)]   // Tilt
+      x: [deg(-45), deg(50)],  // Nod yes (flexion/extension). Clinical total flex/ext: ~90-110° combined
+      y: [deg(-80), deg(80)],  // Shake no (rotation). Clinical: ~60-80° each side (adjusted from -75/+75)
+      z: [deg(-45), deg(45)]   // Tilt (lateral flexion). Clinical: ~45° each side
     },
     translationLock: true,
     enabled: true,
     degreesOfFreedom: 3,
-    notes: 'Head-neck junction - primary rotation joint'
+    notes: 'Head-neck junction (atlanto-occipital and atlantoaxial joints) - primary rotation joint for head. Clinical cervical ROM norms (Physiopedia): Total FLEX/EXT ~90-110°, ROT ~60-80° each side, LAT FLEX ~45° each side'
   },
   
   // ==================== LEFT ARM ====================
   
   'mixamorig1LeftShoulder': {
     boneName: 'mixamorig1LeftShoulder',
-    displayName: 'Left Clavicle (Thoracoscapular)',
+    displayName: 'Left Scapula (Scapulothoracic)',
     rotationLimits: {
-      x: [deg(-5), deg(5)],    // Minimal elevation/depression
-      y: [deg(-5), deg(5)],    // Minimal rotation
-      z: [deg(-8), deg(8)]     // Minimal protraction/retraction
+      x: [deg(-35), deg(40)],   // Upward/downward rotation: -35° (depressed) to 40° (elevated) in anatomical space
+      y: [deg(-35), deg(35)],   // Internal/external rotation (scapular plane adjustment)
+      z: [deg(-40), deg(20)]    // Protraction/retraction: -40° (protracted) to 20° (retracted) in anatomical space (mirrored)
+    },
+    tPoseOffset: {
+      x: deg(-20),  // T-pose IS at -20° in anatomical space (scapula depressed)
+      z: deg(10)    // T-pose IS at 10° in anatomical space for left side (mirrored geometry)
     },
     translationLock: true,
     enabled: true,
     degreesOfFreedom: 3,
-    notes: 'Thoracoscapular joint - scapula gliding, very limited direct rotation. Main shoulder motion is at glenohumeral (LeftArm)'
+    notes: 'Scapulothoracic joint - contributes ~60° to full overhead motion via scapulohumeral rhythm (2:1 GH:ST ratio). Upward rotation is primary contributor to abduction.'
   },
   
   'mixamorig1LeftArm': {
     boneName: 'mixamorig1LeftArm',
     displayName: 'Left Shoulder (Glenohumeral)',
     rotationLimits: {
-      x: [deg(-50), deg(180)], // Forward raise (flexion) - wide range
-      y: [deg(-90), deg(90)],  // Internal/external rotation
-      z: [deg(-30), deg(180)]  // Side raise (abduction)
+      x: [deg(-30), deg(180)],  // X-axis: Abduction/adduction in T-pose space. Clinical: ABD ~180°, ADD ~30-40°
+      y: [deg(-90), deg(90)],   // Y-axis: Internal/external rotation. Clinical: IR ~70-90°, ER ~90°
+      z: [deg(-60), deg(180)]   // Z-axis: Flexion/extension. Clinical: FLEX ~180°, EXT ~60° (adjusted from -40)
+    },
+    tPoseOffset: {
+      x: deg(90),  // T-pose: arms horizontal = 90° abduction anatomically
+      y: deg(0),   // Rotation is neutral
+      z: deg(0)    // Horizontal = 0° flexion (pure abduction plane)
     },
     translationLock: true,
     enabled: true,
     degreesOfFreedom: 3,
-    notes: 'Ball-and-socket joint - highest mobility in body'
+    notes: 'Glenohumeral ball-and-socket joint - contributes ~120° to overhead motion. Works with scapula in 2:1 ratio (scapulohumeral rhythm): first 30° is pure GH, then 2° GH per 1° scapular rotation to 180° total elevation. Clinical norms (AAOS): FLEX ~180°, EXT ~60°, ABD ~180°, IR/ER ~70-90°'
   },
   
   'mixamorig1LeftForeArm': {
     boneName: 'mixamorig1LeftForeArm',
     displayName: 'Left Elbow',
     rotationLimits: {
-      x: [deg(0), deg(145)],   // Flexion only (hinge joint)
-      y: [deg(-90), deg(90)],  // Pronation/supination (forearm rotation)
-      z: [deg(-5), deg(5)]     // Minimal deviation
+      x: [deg(-150), deg(10)],  // X-axis: Flexion (negative) ~145-150°, extension ~0° with 5-10° hyperextension (AAOS/Norkin & White)
+      y: [deg(-90), deg(90)],   // Y-axis: Pronation/supination ~80-90° each direction (clinical norms)
+      z: [deg(-5), deg(5)]      // Z-axis: Minimal deviation
+    },
+    tPoseOffset: {
+      x: deg(0)  // T-pose IS at 0° extended (anatomical neutral)
     },
     translationLock: true,
     enabled: true,
-    degreesOfFreedom: 2, // Primarily 1 DOF (flexion) + forearm rotation
-    notes: 'Hinge joint - cannot hyperextend in normal anatomy'
+    degreesOfFreedom: 2,
+    notes: 'Hinge joint with minimal hyperextension. Clinical ROM: FLEX ~145-150°, EXT 0° (with 5-10° hyperextension in some individuals). Forearm rotation (radio-ulnar): SUP/PRO ~80-90° each direction.'
   },
   
   'mixamorig1LeftHand': {
     boneName: 'mixamorig1LeftHand',
     displayName: 'Left Wrist',
     rotationLimits: {
-      x: [deg(-70), deg(80)],  // Flexion/extension
-      y: [deg(-10), deg(10)],  // Minimal rotation (handled by forearm)
-      z: [deg(-20), deg(35)]   // Ulnar/radial deviation
+      x: [deg(-70), deg(80)],  // Flexion/extension. Clinical: FLEX ~80°, EXT ~70° (Physiopedia)
+      y: [deg(-10), deg(10)],  // Minimal rotation (handled by forearm pronation/supination)
+      z: [deg(-20), deg(35)]   // Ulnar/radial deviation. Clinical: ULN DEV ~30-40°, RAD DEV ~20°
     },
     translationLock: true,
     enabled: true,
     degreesOfFreedom: 2,
-    notes: 'Complex joint - primarily flexion and side-to-side motion'
+    notes: 'Complex joint - primarily flexion/extension and ulnar/radial deviation. Clinical norms: FLEX ~80°, EXT ~70°, ULN DEV ~30-40°, RAD DEV ~20°'
   },
   
   // ==================== RIGHT ARM ====================
   
   'mixamorig1RightShoulder': {
     boneName: 'mixamorig1RightShoulder',
-    displayName: 'Right Clavicle (Thoracoscapular)',
+    displayName: 'Right Scapula (Scapulothoracic)',
     rotationLimits: {
-      x: [deg(-5), deg(5)],    // Minimal elevation/depression
-      y: [deg(-5), deg(5)],    // Minimal rotation
-      z: [deg(-8), deg(8)]     // Minimal protraction/retraction
+      x: [deg(-35), deg(40)],   // Upward/downward rotation: -35° (depressed) to 40° (elevated) in anatomical space
+      y: [deg(-35), deg(35)],   // Internal/external rotation (scapular plane adjustment)
+      z: [deg(-20), deg(40)]    // Protraction/retraction: -20° (retracted) to 40° (protracted) in anatomical space
+    },
+    tPoseOffset: {
+      x: deg(-20),  // T-pose IS at -20° in anatomical space (scapula depressed)
+      z: deg(-10)   // T-pose IS at -10° in anatomical space (scapula retracted)
     },
     translationLock: true,
     enabled: true,
     degreesOfFreedom: 3,
-    notes: 'Thoracoscapular joint - scapula gliding, very limited direct rotation. Main shoulder motion is at glenohumeral (RightArm)'
+    notes: 'Scapulothoracic joint - contributes ~60° to full overhead motion via scapulohumeral rhythm (2:1 GH:ST ratio). Upward rotation is primary contributor to abduction.'
   },
   
   'mixamorig1RightArm': {
     boneName: 'mixamorig1RightArm',
     displayName: 'Right Shoulder (Glenohumeral)',
     rotationLimits: {
-      x: [deg(-50), deg(180)],  // Forward raise (flexion)
-      y: [deg(-90), deg(90)],   // Internal/external rotation
-      z: [deg(-180), deg(30)]   // Side raise (abduction) - negative for right side
+      x: [deg(-30), deg(180)],  // X-axis: Abduction/adduction in T-pose space. Clinical: ABD ~180°, ADD ~30-40°
+      y: [deg(-90), deg(90)],   // Y-axis: Internal/external rotation. Clinical: IR ~70-90°, ER ~90°
+      z: [deg(-60), deg(180)]   // Z-axis: Flexion/extension. Clinical: FLEX ~180°, EXT ~60° (adjusted from -40)
+    },
+    tPoseOffset: {
+      x: deg(90),  // T-pose: arms horizontal = 90° abduction anatomically
+      y: deg(0),   // Rotation is neutral
+      z: deg(0)    // Horizontal = 0° flexion (pure abduction plane)
     },
     translationLock: true,
     enabled: true,
     degreesOfFreedom: 3,
-    notes: 'Ball-and-socket joint - highest mobility in body'
+    notes: 'Glenohumeral ball-and-socket joint - contributes ~120° to overhead motion. Works with scapula in 2:1 ratio (scapulohumeral rhythm): first 30° is pure GH, then 2° GH per 1° scapular rotation to 180° total elevation. Clinical norms (AAOS): FLEX ~180°, EXT ~60°, ABD ~180°, IR/ER ~70-90°'
   },
   
   'mixamorig1RightForeArm': {
     boneName: 'mixamorig1RightForeArm',
     displayName: 'Right Elbow',
     rotationLimits: {
-      x: [deg(0), deg(145)],
-      y: [deg(-90), deg(90)],  // Pronation/supination (forearm rotation)
-      z: [deg(-5), deg(5)]     // Minimal deviation
+      x: [deg(-150), deg(10)],  // X-axis: Flexion (negative) ~145-150°, extension ~0° with 5-10° hyperextension (AAOS/Norkin & White)
+      y: [deg(-90), deg(90)],   // Y-axis: Pronation/supination ~80-90° each direction (clinical norms)
+      z: [deg(-5), deg(5)]      // Z-axis: Minimal deviation
+    },
+    tPoseOffset: {
+      x: deg(0)  // T-pose IS at 0° extended (anatomical neutral)
     },
     translationLock: true,
     enabled: true,
     degreesOfFreedom: 2,
-    notes: 'Hinge joint - cannot hyperextend in normal anatomy'
+    notes: 'Hinge joint with minimal hyperextension. Clinical ROM: FLEX ~145-150°, EXT 0° (with 5-10° hyperextension in some individuals). Forearm rotation (radio-ulnar): SUP/PRO ~80-90° each direction.'
   },
   
   'mixamorig1RightHand': {
     boneName: 'mixamorig1RightHand',
     displayName: 'Right Wrist',
     rotationLimits: {
-      x: [deg(-70), deg(80)],
-      y: [deg(-10), deg(10)],
-      z: [deg(-35), deg(20)]  // Reversed for right side
+      x: [deg(-70), deg(80)],  // Flexion/extension. Clinical: FLEX ~80°, EXT ~70° (Physiopedia)
+      y: [deg(-10), deg(10)],  // Minimal rotation (handled by forearm pronation/supination)
+      z: [deg(-35), deg(20)]   // Ulnar/radial deviation (reversed for right side). Clinical: ULN DEV ~30-40°, RAD DEV ~20°
     },
     translationLock: true,
     enabled: true,
     degreesOfFreedom: 2,
-    notes: 'Complex joint - primarily flexion and side-to-side motion'
+    notes: 'Complex joint - primarily flexion/extension and ulnar/radial deviation. Clinical norms: FLEX ~80°, EXT ~70°, ULN DEV ~30-40°, RAD DEV ~20°'
   },
   
   // ==================== LEFT LEG ====================
@@ -240,42 +266,45 @@ export const JOINT_CONSTRAINTS: Record<string, JointConstraint> = {
     boneName: 'mixamorig1LeftUpLeg',
     displayName: 'Left Hip',
     rotationLimits: {
-      x: [deg(-30), deg(120)], // Flexion/extension - large range
-      y: [deg(-45), deg(45)],  // Internal/external rotation
-      z: [deg(-45), deg(45)]   // Abduction/adduction
+      x: [deg(-30), deg(45)],   // X-axis: Abduction/adduction. Clinical (AAOS): ABD ~40-45°, ADD ~20-30°
+      y: [deg(-45), deg(45)],   // Y-axis: Internal/external rotation. Clinical: IR ~35-40°, ER ~40-45°
+      z: [deg(-20), deg(120)]   // Z-axis: Flexion/extension. Clinical: FLEX ~120°, EXT ~20° (adjusted from -30)
+    },
+    tPoseOffset: {
+      z: deg(-171)  // T-pose IS at -171.3° on Z-axis in anatomical space
     },
     translationLock: true,
     enabled: true,
     degreesOfFreedom: 3,
-    notes: 'Ball-and-socket joint - second most mobile joint'
+    notes: 'Ball-and-socket joint - second most mobile joint after shoulder. Clinical norms (AAOS/Norkin & White): FLEX ~120°, EXT ~20°, ABD ~40-45°, ADD ~20-30°, IR ~35-40°, ER ~40-45°'
   },
   
   'mixamorig1LeftLeg': {
     boneName: 'mixamorig1LeftLeg',
     displayName: 'Left Knee',
     rotationLimits: {
-      x: [deg(-150), deg(5)],  // Flexion - hinge joint
-      y: [deg(-15), deg(15)],  // Slight rotation when flexed
-      z: [deg(-10), deg(10)]   // Minimal valgus/varus
+      x: [deg(-135), deg(10)],  // Flexion ~135° (adjusted from -150), extension 0° with 5-10° hyperextension (clinical norms)
+      y: [deg(-15), deg(15)],   // Tibial rotation (at ~90° flexion): Internal ~10°, External ~30-40° (conservative range)
+      z: [deg(-10), deg(10)]    // Minimal valgus/varus
     },
     translationLock: true,
     enabled: true,
     degreesOfFreedom: 1,
-    notes: 'Hinge joint - no hyperextension, slight rotation when bent'
+    notes: 'Hinge joint with slight rotation when flexed. Clinical ROM: FLEX ~135°, EXT 0° (with 5-10° hyperextension). Tibial rotation occurs primarily when knee is flexed ~90°: INT ~10°, EXT ~30-40°'
   },
   
   'mixamorig1LeftFoot': {
     boneName: 'mixamorig1LeftFoot',
     displayName: 'Left Ankle',
     rotationLimits: {
-      x: [deg(-45), deg(20)],  // Plantarflexion/dorsiflexion
+      x: [deg(-50), deg(20)],  // Plantarflexion/dorsiflexion. Clinical: DORSI ~20°, PLANT ~50° (adjusted from -45)
       y: [deg(-10), deg(10)],  // Minimal rotation
-      z: [deg(-25), deg(25)]   // Inversion/eversion
+      z: [deg(-35), deg(20)]   // Inversion/eversion. Clinical (subtalar): INV ~20-35°, EVER ~10-20°
     },
     translationLock: true,
     enabled: true,
     degreesOfFreedom: 2,
-    notes: 'Modified hinge joint - primarily up/down with some side tilt'
+    notes: 'Modified hinge joint - talocrural (dorsi/plantar) and subtalar (inv/ever). Clinical ROM (AAOS): Talocrural - DORSI ~20°, PLANT ~50°. Subtalar - INV ~20-35°, EVER ~10-20°'
   },
   
   'mixamorig1LeftToeBase': {
@@ -298,42 +327,45 @@ export const JOINT_CONSTRAINTS: Record<string, JointConstraint> = {
     boneName: 'mixamorig1RightUpLeg',
     displayName: 'Right Hip',
     rotationLimits: {
-      x: [deg(-30), deg(120)],  // Flexion/extension
-      y: [deg(-45), deg(45)],
-      z: [deg(-45), deg(45)]    // Abduction/adduction
+      x: [deg(-30), deg(45)],   // X-axis: Abduction/adduction. Clinical (AAOS): ABD ~40-45°, ADD ~20-30°
+      y: [deg(-45), deg(45)],   // Y-axis: Internal/external rotation. Clinical: IR ~35-40°, ER ~40-45°
+      z: [deg(-20), deg(120)]   // Z-axis: Flexion/extension. Clinical: FLEX ~120°, EXT ~20° (adjusted from -30)
+    },
+    tPoseOffset: {
+      z: deg(-174)  // T-pose IS at -173.9° on Z-axis in anatomical space
     },
     translationLock: true,
     enabled: true,
     degreesOfFreedom: 3,
-    notes: 'Ball-and-socket joint - second most mobile joint'
+    notes: 'Ball-and-socket joint - second most mobile joint after shoulder. Clinical norms (AAOS/Norkin & White): FLEX ~120°, EXT ~20°, ABD ~40-45°, ADD ~20-30°, IR ~35-40°, ER ~40-45°'
   },
   
   'mixamorig1RightLeg': {
     boneName: 'mixamorig1RightLeg',
     displayName: 'Right Knee',
     rotationLimits: {
-      x: [deg(-150), deg(5)],   // Flexion - hinge joint
-      y: [deg(-15), deg(15)],
+      x: [deg(-135), deg(10)],  // Flexion ~135° (adjusted from -150), extension 0° with 5-10° hyperextension (clinical norms)
+      y: [deg(-15), deg(15)],   // Tibial rotation (at ~90° flexion): Internal ~10°, External ~30-40° (conservative range)
       z: [deg(-10), deg(10)]    // Minimal valgus/varus
     },
     translationLock: true,
     enabled: true,
     degreesOfFreedom: 1,
-    notes: 'Hinge joint - no hyperextension, slight rotation when bent'
+    notes: 'Hinge joint with slight rotation when flexed. Clinical ROM: FLEX ~135°, EXT 0° (with 5-10° hyperextension). Tibial rotation occurs primarily when knee is flexed ~90°: INT ~10°, EXT ~30-40°'
   },
   
   'mixamorig1RightFoot': {
     boneName: 'mixamorig1RightFoot',
     displayName: 'Right Ankle',
     rotationLimits: {
-      x: [deg(-45), deg(20)],   // Plantarflexion/dorsiflexion
-      y: [deg(-10), deg(10)],
-      z: [deg(-25), deg(25)]    // Inversion/eversion
+      x: [deg(-50), deg(20)],  // Plantarflexion/dorsiflexion. Clinical: DORSI ~20°, PLANT ~50° (adjusted from -45)
+      y: [deg(-10), deg(10)],  // Minimal rotation
+      z: [deg(-35), deg(20)]   // Inversion/eversion. Clinical (subtalar): INV ~20-35°, EVER ~10-20°
     },
     translationLock: true,
     enabled: true,
     degreesOfFreedom: 2,
-    notes: 'Modified hinge joint - primarily up/down with some side tilt'
+    notes: 'Modified hinge joint - talocrural (dorsi/plantar) and subtalar (inv/ever). Clinical ROM (AAOS): Talocrural - DORSI ~20°, PLANT ~50°. Subtalar - INV ~20-35°, EVER ~10-20°'
   },
   
   'mixamorig1RightToeBase': {
