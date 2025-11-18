@@ -162,23 +162,13 @@ export const JOINT_CONFIGS: JointConfig[] = [
   // - Flexion: ~180°, Extension: ~60°
   // - Abduction: ~180°, Adduction: ~30-40° across midline
   // - Internal rotation: ~70-90°, External rotation: ~90°
-  //
-  // T-POSE OFFSET CORRECTION:
-  // In T-pose, arms are abducted ~90° from anatomical neutral (arms at sides).
-  // We need to subtract this offset so anatomical neutral reads 0°.
-  // Based on logged T-pose angles: RightArm x=56.5° y=-27.3° z=8.7°
-  // Approximate offset: ~90° abduction (Y-axis in XYZ Euler order)
   {
     id: 'shoulder',
     side: 'left',
     proximalBoneName: 'mixamorig1Spine2',      // or mixamorig1LeftShoulder if preferred
     distalBoneName: 'mixamorig1LeftArm',
     eulerOrder: 'XYZ',
-    tPoseOffset: {
-      flexExt: 0,      // T-pose arms are roughly in frontal plane (no flex/ext offset)
-      abdAdd: -90,     // T-pose = 90° abducted; subtract to make neutral = 0°
-      rotation: 0,     // Minimal rotation offset in T-pose
-    },
+    // No tPoseOffset needed - axis mapping handles it correctly
   },
   {
     id: 'shoulder',
@@ -186,11 +176,7 @@ export const JOINT_CONFIGS: JointConfig[] = [
     proximalBoneName: 'mixamorig1Spine2',
     distalBoneName: 'mixamorig1RightArm',
     eulerOrder: 'XYZ',
-    tPoseOffset: {
-      flexExt: 0,
-      abdAdd: -90,     // T-pose = 90° abducted; subtract to make neutral = 0°
-      rotation: 0,
-    },
+    // No tPoseOffset needed - axis mapping handles it correctly
   },
 
   // ==================== ELBOWS ====================
@@ -390,11 +376,30 @@ export function mapEulerToBiomech(
   let abdAdd = deg(euler.z);
   let rotation = deg(euler.y);
 
+  // SHOULDER: Special axis mapping due to rig conventions
+  // Based on T-pose logs showing RightArm x=56.5° (large value = abduction axis)
+  // For shoulders, X-axis represents abduction/adduction in this rig
+  // BUT: need to negate axes to match clinical convention
+  if (jointId === 'shoulder') {
+    flexExt = -deg(euler.y);   // Y = flexion/extension (NEGATED: forward raise = positive flexion)
+    abdAdd = -deg(euler.x);    // X = abduction/adduction (NEGATED: lateral raise = positive abduction)
+    rotation = deg(euler.z);   // Z = rotation
+  }
+
   // Apply T-pose offset correction to convert from T-pose to anatomical neutral
   if (tPoseOffset) {
     flexExt += tPoseOffset.flexExt;
     abdAdd += tPoseOffset.abdAdd;
     rotation += tPoseOffset.rotation;
+  }
+
+  // Joint-specific sign corrections to match clinical conventions
+  
+  // KNEE: Clinical convention is extension = 0°, flexion = positive (0° to 135°)
+  // But in most rigs, bending the knee produces negative rotation
+  // Flip the sign so that bent knee = positive flexion angle
+  if (jointId === 'knee') {
+    flexExt = -flexExt;
   }
 
   // Example: For right side joints, you *might* want to flip frontal-plane sign.
@@ -403,12 +408,8 @@ export function mapEulerToBiomech(
   // if (side === 'right') {
   //   abdAdd = -abdAdd;
   // }
-
-  // Example: for knees you might choose to damp rotation (since it only occurs near flexion)
-  // but that's more of a teaching overlay than math, so we keep the raw value here.
   
   // Prevent unused variable warnings while keeping parameters for future customization
-  void jointId;
   void side;
 
   return {

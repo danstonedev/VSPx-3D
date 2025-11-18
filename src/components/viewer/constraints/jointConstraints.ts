@@ -163,9 +163,9 @@ export const JOINT_CONSTRAINTS: Record<string, JointConstraint> = {
     boneName: 'mixamorig1LeftForeArm',
     displayName: 'Left Elbow',
     rotationLimits: {
-      x: [deg(-150), deg(10)],  // X-axis: Flexion (negative) ~145-150°, extension ~0° with 5-10° hyperextension (AAOS/Norkin & White)
-      y: [deg(-90), deg(90)],   // Y-axis: Pronation/supination ~80-90° each direction (clinical norms)
-      z: [deg(-5), deg(5)]      // Z-axis: Minimal deviation
+      x: [deg(-10), deg(150)],  // X-axis: Extension/hyperextension -10° to flexion 150° (AAOS/Norkin & White)
+      y: [deg(-90), deg(90)],   // Y-axis: Pronation -90° to supination +90° (clinical norms)
+      z: [deg(-15), deg(15)]    // Z-axis: Varus/valgus deviation ±15° (accounts for carrying angle variance)
     },
     tPoseOffset: {
       x: deg(0)  // T-pose IS at 0° extended (anatomical neutral)
@@ -173,7 +173,7 @@ export const JOINT_CONSTRAINTS: Record<string, JointConstraint> = {
     translationLock: true,
     enabled: true,
     degreesOfFreedom: 2,
-    notes: 'Hinge joint with minimal hyperextension. Clinical ROM: FLEX ~145-150°, EXT 0° (with 5-10° hyperextension in some individuals). Forearm rotation (radio-ulnar): SUP/PRO ~80-90° each direction.'
+    notes: 'Hinge joint with minimal hyperextension. Clinical ROM: FLEX ~145-150°, EXT 0° (with 5-10° hyperextension in some individuals). Forearm rotation (radio-ulnar): SUP/PRO ~80-90° each direction. Varus/valgus range includes structural carrying angle (10-15°) plus minimal functional deviation.'
   },
   
   'mixamorig1LeftHand': {
@@ -233,9 +233,9 @@ export const JOINT_CONSTRAINTS: Record<string, JointConstraint> = {
     boneName: 'mixamorig1RightForeArm',
     displayName: 'Right Elbow',
     rotationLimits: {
-      x: [deg(-150), deg(10)],  // X-axis: Flexion (negative) ~145-150°, extension ~0° with 5-10° hyperextension (AAOS/Norkin & White)
-      y: [deg(-90), deg(90)],   // Y-axis: Pronation/supination ~80-90° each direction (clinical norms)
-      z: [deg(-5), deg(5)]      // Z-axis: Minimal deviation
+      x: [deg(-10), deg(150)],  // X-axis: Extension/hyperextension -10° to flexion 150° (AAOS/Norkin & White)
+      y: [deg(-90), deg(90)],   // Y-axis: Pronation -90° to supination +90° (clinical norms)
+      z: [deg(-15), deg(15)]    // Z-axis: Varus/valgus deviation ±15° (accounts for carrying angle variance)
     },
     tPoseOffset: {
       x: deg(0)  // T-pose IS at 0° extended (anatomical neutral)
@@ -243,7 +243,7 @@ export const JOINT_CONSTRAINTS: Record<string, JointConstraint> = {
     translationLock: true,
     enabled: true,
     degreesOfFreedom: 2,
-    notes: 'Hinge joint with minimal hyperextension. Clinical ROM: FLEX ~145-150°, EXT 0° (with 5-10° hyperextension in some individuals). Forearm rotation (radio-ulnar): SUP/PRO ~80-90° each direction.'
+    notes: 'Hinge joint with minimal hyperextension. Clinical ROM: FLEX ~145-150°, EXT 0° (with 5-10° hyperextension in some individuals). Forearm rotation (radio-ulnar): SUP/PRO ~80-90° each direction. Varus/valgus range includes structural carrying angle (10-15°) plus minimal functional deviation.'
   },
   
   'mixamorig1RightHand': {

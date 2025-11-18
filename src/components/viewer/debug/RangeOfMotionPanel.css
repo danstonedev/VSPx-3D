@@ -415,6 +415,7 @@
   justify-content: space-between;
   align-items: center;
   margin-bottom: 10px;
+  position: relative;
 }
 
 .axis-label {
@@ -423,6 +424,16 @@
   font-size: 13px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+}
+
+.axis-label.left-label {
+  flex: 0 0 auto;
+  text-align: left;
+}
+
+.axis-label.right-label {
+  flex: 0 0 auto;
+  text-align: right;
 }
 
 .angle-value {
@@ -491,8 +502,8 @@
   left: 50%;
   top: 0;
   height: 100%;
-  width: 2px;
-  background: rgba(255, 255, 255, 0.5);
+  width: 0;
+  background: transparent;
   transform: translateX(-50%);
   display: flex;
   align-items: center;
@@ -502,9 +513,9 @@
 .neutral-marker {
   position: absolute;
   top: -20px;
-  background: rgba(255, 255, 255, 0.9);
+  background: transparent;
   color: #000000;
-  padding: 2px 6px;
+  padding: 0;
   border-radius: 3px;
   font-size: 10px;
   font-weight: bold;
