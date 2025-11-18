@@ -557,7 +557,10 @@ export function RangeOfMotionPanel({
                               <div className="scale-half scale-left">
                                 <span className="scale-limit">{minAngle.toFixed(0)}°</span>
                               </div>
-                              <div className="scale-center" style={{ left: `${neutralPos}%` }}>
+                              <div 
+                                className="scale-center" 
+                                style={{ '--neutral-pos': `${neutralPos}%` } as React.CSSProperties}
+                              >
                                 <div className="neutral-marker"></div>
                               </div>
                               <div className="scale-half scale-right">
@@ -566,16 +569,16 @@ export function RangeOfMotionPanel({
                             </div>
                             <div 
                               className="position-indicator" 
-                              style={{ left: `${clampedPos}%` }}
+                              style={{ '--indicator-pos': `${clampedPos}%` } as React.CSSProperties}
                             >
                               <div className="indicator-dot"></div>
                             </div>
                             <div 
                               className="scale-fill"
                               style={{ 
-                                width: `${Math.abs(clampedPos - neutralPos)}%`,
-                                left: clampedPos < neutralPos ? `${clampedPos}%` : `${neutralPos}%`
-                              }}
+                                '--fill-width': `${Math.abs(clampedPos - neutralPos)}%`,
+                                '--fill-left': clampedPos < neutralPos ? `${clampedPos}%` : `${neutralPos}%`
+                              } as React.CSSProperties}
                             ></div>
                           </div>
                         </div>

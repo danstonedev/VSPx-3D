@@ -1,54 +1,156 @@
 /**
  * Range of Motion Panel Styles
+ * Modern, modular design system with CSS custom properties
  */
 
+/* ============================================
+   Design Tokens
+   ============================================ */
+:root {
+  /* Color Palette - Cyberpunk Medical Tech */
+  --rom-color-primary: #00ffff;
+  --rom-color-secondary: #00ff00;
+  --rom-color-accent: #00ffaa;
+  --rom-color-warning: #ff9900;
+  --rom-color-error: #ff0000;
+  --rom-color-info: #00aaff;
+  --rom-color-special: #da70d6;
+  
+  /* Neutral Colors */
+  --rom-color-text-primary: #ffffff;
+  --rom-color-text-secondary: #cccccc;
+  --rom-color-text-tertiary: #999999;
+  --rom-color-text-muted: #666666;
+  
+  /* Background Colors */
+  --rom-bg-primary: rgba(0, 0, 0, 0.85);
+  --rom-bg-secondary: rgba(0, 0, 0, 0.3);
+  --rom-bg-tertiary: rgba(255, 255, 255, 0.05);
+  --rom-bg-elevated: rgba(255, 255, 255, 0.08);
+  
+  /* Surface Colors with Alpha */
+  --rom-surface-primary-alpha: rgba(0, 255, 255, 0.1);
+  --rom-surface-secondary-alpha: rgba(0, 255, 0, 0.1);
+  --rom-surface-warning-alpha: rgba(255, 153, 0, 0.1);
+  --rom-surface-error-alpha: rgba(255, 0, 0, 0.1);
+  --rom-surface-info-alpha: rgba(0, 100, 255, 0.1);
+  --rom-surface-special-alpha: rgba(138, 43, 226, 0.15);
+  
+  /* Border Colors */
+  --rom-border-primary: rgba(0, 255, 255, 0.3);
+  --rom-border-secondary: rgba(0, 255, 255, 0.15);
+  --rom-border-tertiary: rgba(255, 255, 255, 0.1);
+  --rom-border-focus: rgba(0, 255, 255, 0.8);
+  
+  /* Spacing Scale */
+  --rom-space-xs: 4px;
+  --rom-space-sm: 8px;
+  --rom-space-md: 12px;
+  --rom-space-lg: 15px;
+  --rom-space-xl: 20px;
+  --rom-space-2xl: 30px;
+  
+  /* Border Radius */
+  --rom-radius-sm: 4px;
+  --rom-radius-md: 6px;
+  --rom-radius-lg: 8px;
+  --rom-radius-full: 999px;
+  
+  /* Typography */
+  --rom-font-family: 'Courier New', monospace;
+  --rom-font-size-xs: 9px;
+  --rom-font-size-sm: 11px;
+  --rom-font-size-md: 13px;
+  --rom-font-size-base: 14px;
+  --rom-font-size-lg: 16px;
+  --rom-font-size-xl: 18px;
+  
+  /* Transitions */
+  --rom-transition-fast: 0.15s;
+  --rom-transition-normal: 0.2s;
+  --rom-transition-slow: 0.3s;
+  --rom-transition-veryslow: 0.5s;
+  
+  /* Easing Functions */
+  --rom-easing-standard: cubic-bezier(0.4, 0, 0.2, 1);
+  --rom-easing-decelerate: cubic-bezier(0, 0, 0.2, 1);
+  --rom-easing-accelerate: cubic-bezier(0.4, 0, 1, 1);
+  --rom-easing-smooth: cubic-bezier(0.4, 0, 0.6, 1);
+  --rom-easing-bounce: cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  
+  /* Shadows */
+  --rom-shadow-sm: 0 0 10px rgba(0, 255, 255, 0.3);
+  --rom-shadow-md: 0 0 20px rgba(0, 255, 255, 0.4);
+  --rom-shadow-lg: 0 0 30px rgba(0, 255, 255, 0.6);
+  --rom-shadow-glow: 0 0 10px rgba(0, 255, 255, 0.8), 0 0 20px rgba(0, 255, 255, 0.4);
+  --rom-shadow-glow-strong: 0 0 15px rgba(0, 255, 255, 1), 0 0 30px rgba(0, 255, 255, 0.6);
+  
+  /* Indicator Specific */
+  --rom-indicator-size: 16px;
+  --rom-indicator-border-width: 3px;
+  --rom-scale-track-height: 30px;
+  --rom-scale-fill-opacity: 0.3;
+}
+
+/* ============================================
+   Main Panel Container
+   ============================================ */
 .rom-panel {
   position: fixed;
-  top: 20px;
-  right: 20px;
+  top: var(--rom-space-xl);
+  right: var(--rom-space-xl);
   width: 350px;
   max-height: 90vh;
-  background: rgba(0, 0, 0, 0.85);
-  border: 2px solid rgba(0, 255, 255, 0.3);
-  border-radius: 8px;
-  color: #ffffff;
-  font-family: 'Courier New', monospace;
+  background: var(--rom-bg-primary);
+  border: 2px solid var(--rom-border-primary);
+  border-radius: var(--rom-radius-lg);
+  color: var(--rom-color-text-primary);
+  font-family: var(--rom-font-family);
   overflow: hidden;
   -webkit-backdrop-filter: blur(10px);
   backdrop-filter: blur(10px);
   z-index: 1000;
-  transition: all 0.3s ease;
+  transition: all var(--rom-transition-slow) var(--rom-easing-smooth);
 }
 
 .rom-panel.collapsed {
   max-height: 60px;
 }
 
+/* ============================================
+   Panel Header
+   ============================================ */
 .rom-panel-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 15px;
-  background: rgba(0, 255, 255, 0.1);
-  border-bottom: 1px solid rgba(0, 255, 255, 0.3);
+  padding: var(--rom-space-lg);
+  background: var(--rom-surface-primary-alpha);
+  border-bottom: 1px solid var(--rom-border-primary);
   cursor: pointer;
   -webkit-user-select: none;
   user-select: none;
+  transition: background var(--rom-transition-fast) var(--rom-easing-standard);
+}
+
+.rom-panel-header:hover {
+  background: rgba(0, 255, 255, 0.15);
 }
 
 .rom-panel-header h3 {
   margin: 0;
-  font-size: 18px;
-  color: #00ffff;
+  font-size: var(--rom-font-size-xl);
+  color: var(--rom-color-primary);
   text-transform: uppercase;
   letter-spacing: 1px;
+  text-shadow: var(--rom-shadow-sm);
 }
 
 .collapse-btn {
   background: none;
   border: none;
-  color: #00ffff;
-  font-size: 18px;
+  color: var(--rom-color-primary);
+  font-size: var(--rom-font-size-xl);
   cursor: pointer;
   padding: 0;
   width: 30px;
@@ -56,120 +158,138 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: transform 0.3s ease;
+  transition: transform var(--rom-transition-slow) var(--rom-easing-bounce);
 }
 
 .collapse-btn:hover {
   transform: scale(1.2);
 }
 
+.collapse-btn:active {
+  transform: scale(0.95);
+}
+
+/* ============================================
+   Panel Content & Scrollbar
+   ============================================ */
 .rom-panel-content {
-  padding: 15px;
+  padding: var(--rom-space-lg);
   max-height: calc(90vh - 60px);
   overflow-y: auto;
 }
 
-/* Scrollbar styling */
+/* Custom Scrollbar */
 .rom-panel-content::-webkit-scrollbar {
-  width: 8px;
+  width: var(--rom-space-sm);
 }
 
 .rom-panel-content::-webkit-scrollbar-track {
-  background: rgba(0, 0, 0, 0.3);
+  background: var(--rom-bg-secondary);
+  border-radius: var(--rom-radius-sm);
 }
 
 .rom-panel-content::-webkit-scrollbar-thumb {
-  background: rgba(0, 255, 255, 0.5);
-  border-radius: 4px;
+  background: var(--rom-color-primary);
+  opacity: 0.5;
+  border-radius: var(--rom-radius-sm);
+  transition: background var(--rom-transition-fast) var(--rom-easing-standard);
 }
 
 .rom-panel-content::-webkit-scrollbar-thumb:hover {
-  background: rgba(0, 255, 255, 0.7);
+  background: var(--rom-color-primary);
+  opacity: 0.7;
 }
 
 
+/* ============================================
+   Panel Note
+   ============================================ */
 .panel-note {
   margin: 0;
-  padding: 10px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 4px;
-  color: #cccccc;
-  font-size: 12px;
+  padding: var(--rom-space-sm) var(--rom-space-md);
+  background: var(--rom-bg-tertiary);
+  border: 1px solid var(--rom-border-tertiary);
+  border-radius: var(--rom-radius-sm);
+  color: var(--rom-color-text-secondary);
+  font-size: var(--rom-font-size-md);
   line-height: 1.4;
 }
-/* Bone Information */
+/* ============================================
+   Bone Information
+   ============================================ */
 .bone-info {
-  margin-bottom: 20px;
+  margin-bottom: var(--rom-space-xl);
 }
 
 .bone-info h4 {
-  margin: 0 0 10px 0;
-  font-size: 14px;
-  color: #00ff00;
+  margin: 0 0 var(--rom-space-md) 0;
+  font-size: var(--rom-font-size-base);
+  color: var(--rom-color-secondary);
   text-transform: uppercase;
   letter-spacing: 1px;
 }
 
 .bone-name {
-  font-size: 16px;
-  color: #ffffff;
-  margin: 5px 0;
-  padding: 8px;
-  background: rgba(0, 255, 255, 0.1);
-  border-radius: 4px;
+  font-size: var(--rom-font-size-lg);
+  color: var(--rom-color-text-primary);
+  margin: var(--rom-space-xs) 0;
+  padding: var(--rom-space-sm);
+  background: var(--rom-surface-primary-alpha);
+  border-radius: var(--rom-radius-sm);
   font-weight: bold;
 }
 
 .dof-info {
   display: flex;
   justify-content: space-between;
-  margin: 10px 0;
-  padding: 8px;
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 4px;
+  margin: var(--rom-space-md) 0;
+  padding: var(--rom-space-sm);
+  background: var(--rom-bg-tertiary);
+  border-radius: var(--rom-radius-sm);
 }
 
 .dof-info .label {
-  color: #cccccc;
+  color: var(--rom-color-text-secondary);
 }
 
 .dof-info .value {
-  color: #00ffff;
+  color: var(--rom-color-primary);
   font-weight: bold;
 }
 
 .bone-description {
-  font-size: 12px;
-  color: #cccccc;
-  margin: 10px 0;
-  padding: 8px;
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 4px;
+  font-size: var(--rom-font-size-md);
+  color: var(--rom-color-text-secondary);
+  margin: var(--rom-space-md) 0;
+  padding: var(--rom-space-sm);
+  background: var(--rom-bg-tertiary);
+  border-radius: var(--rom-radius-sm);
   line-height: 1.4;
 }
 
-/* Composite Shoulder Motion Analysis */
+/* ============================================
+   Composite Shoulder Motion Analysis
+   ============================================ */
 .composite-shoulder-info {
-  margin: 15px 0;
-  padding: 12px;
-  background: linear-gradient(135deg, rgba(138, 43, 226, 0.15), rgba(75, 0, 130, 0.15));
+  margin: var(--rom-space-lg) 0;
+  padding: var(--rom-space-md);
+  background: linear-gradient(135deg, var(--rom-surface-special-alpha), rgba(75, 0, 130, 0.15));
   border: 1px solid rgba(138, 43, 226, 0.4);
-  border-radius: 6px;
+  border-radius: var(--rom-radius-md);
 }
 
 .composite-shoulder-info h5 {
-  margin: 0 0 8px 0;
-  font-size: 13px;
-  color: #da70d6;
+  margin: 0 0 var(--rom-space-sm) 0;
+  font-size: var(--rom-font-size-md);
+  color: var(--rom-color-special);
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
 
 .shoulder-explanation {
-  font-size: 11px;
+  font-size: var(--rom-font-size-sm);
   color: #d8bfd8;
-  margin: 0 0 12px 0;
+  margin: 0 0 var(--rom-space-md) 0;
   line-height: 1.4;
   font-style: italic;
 }
@@ -177,86 +297,90 @@
 .composite-breakdown {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: var(--rom-space-xs);
 }
 
 .composite-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 4px 0;
+  padding: var(--rom-space-xs) 0;
 }
 
 .composite-row.component-detail {
-  padding-left: 12px;
-  font-size: 12px;
+  padding-left: var(--rom-space-md);
+  font-size: var(--rom-font-size-md);
 }
 
 .component-label {
   color: #e6e6fa;
-  font-size: 12px;
+  font-size: var(--rom-font-size-md);
 }
 
 .component-value {
-  color: #ffffff;
+  color: var(--rom-color-text-primary);
   font-weight: bold;
-  font-size: 13px;
-  font-family: 'Courier New', monospace;
+  font-size: var(--rom-font-size-md);
+  font-family: var(--rom-font-family);
 }
 
 .component-value.composite-total {
   color: #ff69b4;
-  font-size: 16px;
+  font-size: var(--rom-font-size-lg);
 }
 
 .rhythm-note {
-  margin: 10px 0 0 0;
-  padding: 8px;
+  margin: var(--rom-space-md) 0 0 0;
+  padding: var(--rom-space-sm);
   background: rgba(138, 43, 226, 0.2);
-  border-left: 3px solid #da70d6;
-  font-size: 11px;
+  border-left: 3px solid var(--rom-color-special);
+  font-size: var(--rom-font-size-sm);
   color: #e6e6fa;
   line-height: 1.4;
 }
 
-/* Joint Angles */
+/* ============================================
+   Joint Angles
+   ============================================ */
 .joint-angles {
-  margin: 15px 0;
+  margin: var(--rom-space-lg) 0;
 }
 
 .joint-angles h5 {
-  margin: 0 0 10px 0;
-  font-size: 13px;
-  color: #00ff00;
+  margin: 0 0 var(--rom-space-md) 0;
+  font-size: var(--rom-font-size-md);
+  color: var(--rom-color-secondary);
   text-transform: uppercase;
 }
 
-/* Biomechanical Angles (Teaching Display) */
+/* ============================================
+   Biomechanical Angles (Teaching Display)
+   ============================================ */
 .biomech-angles {
-  margin: 20px 0;
-  padding: 15px;
-  background: linear-gradient(135deg, rgba(0, 100, 200, 0.15), rgba(0, 150, 100, 0.15));
+  margin: var(--rom-space-xl) 0;
+  padding: var(--rom-space-lg);
+  background: linear-gradient(135deg, var(--rom-surface-info-alpha), rgba(0, 150, 100, 0.15));
   border: 2px solid rgba(0, 200, 150, 0.4);
-  border-radius: 8px;
+  border-radius: var(--rom-radius-lg);
 }
 
 .biomech-angles h5 {
-  margin: 0 0 10px 0;
-  font-size: 14px;
-  color: #00ffaa;
+  margin: 0 0 var(--rom-space-md) 0;
+  font-size: var(--rom-font-size-base);
+  color: var(--rom-color-accent);
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
 
 .biomech-explanation {
-  font-size: 11px;
+  font-size: var(--rom-font-size-sm);
   color: #b0e0e6;
-  margin: 0 0 15px 0;
+  margin: 0 0 var(--rom-space-lg) 0;
   line-height: 1.5;
-  padding: 10px;
-  background: rgba(0, 0, 0, 0.3);
-  border-radius: 4px;
-  border-left: 3px solid #00ffaa;
+  padding: var(--rom-space-md);
+  background: var(--rom-bg-secondary);
+  border-radius: var(--rom-radius-sm);
+  border-left: 3px solid var(--rom-color-accent);
 }
 
 .biomech-explanation strong {
@@ -266,77 +390,80 @@
 .biomech-angle-grid {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  margin: 12px 0;
+  gap: var(--rom-space-md);
+  margin: var(--rom-space-md) 0;
 }
 
 .biomech-angle-row {
   display: grid;
   grid-template-columns: 1fr auto auto;
   align-items: center;
-  gap: 12px;
-  padding: 10px;
-  background: rgba(0, 0, 0, 0.3);
-  border-radius: 4px;
+  gap: var(--rom-space-md);
+  padding: var(--rom-space-md);
+  background: var(--rom-bg-secondary);
+  border-radius: var(--rom-radius-sm);
   border: 1px solid rgba(0, 200, 150, 0.2);
 }
 
 .biomech-label {
   color: #00ffcc;
   font-weight: 600;
-  font-size: 12px;
+  font-size: var(--rom-font-size-md);
   text-transform: capitalize;
 }
 
 .biomech-value {
-  color: #ffffff;
-  font-size: 16px;
+  color: var(--rom-color-text-primary);
+  font-size: var(--rom-font-size-lg);
   font-weight: bold;
-  font-family: 'Courier New', monospace;
-  padding: 4px 12px;
+  font-family: var(--rom-font-family);
+  padding: var(--rom-space-xs) var(--rom-space-md);
   background: rgba(0, 255, 170, 0.15);
-  border-radius: 4px;
+  border-radius: var(--rom-radius-sm);
   min-width: 60px;
   text-align: center;
 }
 
 .biomech-note {
   color: #90ee90;
-  font-size: 11px;
+  font-size: var(--rom-font-size-sm);
   font-style: italic;
   min-width: 80px;
   text-align: right;
 }
 
 .biomech-footer {
-  margin: 12px 0 0 0;
-  padding: 10px;
+  margin: var(--rom-space-md) 0 0 0;
+  padding: var(--rom-space-md);
   background: rgba(0, 200, 150, 0.1);
-  border-left: 3px solid #00ffaa;
-  font-size: 10px;
+  border-left: 3px solid var(--rom-color-accent);
+  font-size: var(--rom-font-size-xs);
   color: #b0e0e6;
   line-height: 1.5;
 }
 
+/* ============================================
+   Angle Rows
+   ============================================ */
 .angle-row {
   display: grid;
   grid-template-columns: 30px 140px 1fr 60px;
   align-items: center;
-  gap: 10px;
-  margin: 10px 0;
-  padding: 4px 0;
+  gap: var(--rom-space-md);
+  margin: var(--rom-space-md) 0;
+  padding: var(--rom-space-xs) 0;
 }
 
 .angle-row .axis {
-  color: #00ffff;
+  color: var(--rom-color-primary);
   font-weight: bold;
-  font-size: 13px;
+  font-size: var(--rom-font-size-md);
   text-shadow: 0 0 4px rgba(0, 255, 255, 0.5);
   letter-spacing: 0.3px;
 }
 
 .angle-row .value {
-  color: #ffffff;
+  color: var(--rom-color-text-primary);
   text-align: right;
 }
 
@@ -346,9 +473,9 @@
   -webkit-appearance: none;
   appearance: none;
   background: rgba(255, 255, 255, 0.1);
-  border-radius: 999px;
+  border-radius: var(--rom-radius-full);
   overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  border: 1px solid var(--rom-border-tertiary);
 }
 
 .angle-progress::-webkit-progress-bar {
@@ -356,74 +483,87 @@
 }
 
 .angle-progress::-webkit-progress-value {
-  background: linear-gradient(90deg, #00ff00, #ffff00, #ff0000);
-  border-radius: 999px;
-  transition: width 0.2s ease;
+  background: linear-gradient(90deg, var(--rom-color-secondary), #ffff00, var(--rom-color-error));
+  border-radius: var(--rom-radius-full);
+  transition: width var(--rom-transition-normal) var(--rom-easing-standard);
 }
 
 .angle-progress::-moz-progress-bar {
-  background: linear-gradient(90deg, #00ff00, #ffff00, #ff0000);
-  border-radius: 999px;
-  transition: width 0.2s ease;
+  background: linear-gradient(90deg, var(--rom-color-secondary), #ffff00, var(--rom-color-error));
+  border-radius: var(--rom-radius-full);
+  transition: width var(--rom-transition-normal) var(--rom-easing-standard);
 }
 
 .angle-row .util {
-  color: #cccccc;
-  font-size: 11px;
+  color: var(--rom-color-text-secondary);
+  font-size: var(--rom-font-size-sm);
   text-align: right;
 }
 
 .max-util {
   display: flex;
   justify-content: space-between;
-  margin-top: 12px;
-  padding: 8px;
-  background: rgba(0, 255, 255, 0.1);
-  border-radius: 4px;
+  margin-top: var(--rom-space-md);
+  padding: var(--rom-space-sm);
+  background: var(--rom-surface-primary-alpha);
+  border-radius: var(--rom-radius-sm);
 }
 
 .max-util .label {
-  color: #cccccc;
+  color: var(--rom-color-text-secondary);
 }
 
 .max-util .value {
-  color: #00ffff;
+  color: var(--rom-color-primary);
   font-weight: bold;
 }
 
 .max-util .value.warning {
-  color: #ff9900;
-  animation: pulse 1s infinite;
+  color: var(--rom-color-warning);
+  animation: rom-pulse 1s infinite;
 }
 
-@keyframes pulse {
+/* ============================================
+   Animations
+   ============================================ */
+@keyframes rom-pulse {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.6; }
 }
 
-/* Linear Scale Visualization for PT-Friendly ROM Display */
+/* ============================================
+   ROM Indicator - Linear Scale Visualization
+   ============================================ */
 .angle-row-scale {
-  margin: 18px 0;
-  padding: 12px;
-  background: rgba(0, 0, 0, 0.3);
-  border-radius: 6px;
-  border: 1px solid rgba(0, 255, 255, 0.15);
+  margin: var(--rom-space-xl) 0;
+  padding: var(--rom-space-md);
+  background: var(--rom-bg-secondary);
+  border-radius: var(--rom-radius-md);
+  border: 1px solid var(--rom-border-secondary);
+  transition: all var(--rom-transition-normal) var(--rom-easing-standard);
+}
+
+.angle-row-scale:hover {
+  background: var(--rom-bg-tertiary);
+  border-color: var(--rom-border-primary);
 }
 
 .movement-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 10px;
+  margin-bottom: var(--rom-space-md);
   position: relative;
+  gap: var(--rom-space-md);
 }
 
 .axis-label {
-  color: #00ffff;
+  color: var(--rom-color-primary);
   font-weight: bold;
-  font-size: 13px;
+  font-size: var(--rom-font-size-md);
   text-transform: uppercase;
   letter-spacing: 0.5px;
+  text-shadow: var(--rom-shadow-sm);
 }
 
 .axis-label.left-label {
@@ -436,34 +576,56 @@
   text-align: right;
 }
 
-.angle-value {
-  color: #ffffff;
-  font-size: 16px;
+.biomech-badge {
+  color: var(--rom-color-text-primary);
+  font-size: var(--rom-font-size-lg);
   font-weight: bold;
-  padding: 2px 8px;
-  background: rgba(0, 255, 255, 0.1);
-  border-radius: 4px;
+  padding: var(--rom-space-xs) var(--rom-space-sm);
+  background: var(--rom-surface-primary-alpha);
+  border-radius: var(--rom-radius-sm);
+  font-family: var(--rom-font-family);
+  transition: all var(--rom-transition-fast) var(--rom-easing-standard);
+}
+
+.biomech-badge:hover {
+  background: var(--rom-bg-elevated);
+  transform: scale(1.05);
+}
+
+.angle-value {
+  color: var(--rom-color-text-primary);
+  font-size: var(--rom-font-size-lg);
+  font-weight: bold;
+  padding: var(--rom-space-xs) var(--rom-space-sm);
+  background: var(--rom-surface-primary-alpha);
+  border-radius: var(--rom-radius-sm);
 }
 
 .linear-scale {
   position: relative;
   height: 50px;
-  margin: 10px 0;
+  margin: var(--rom-space-md) 0;
 }
 
 .scale-track {
   position: relative;
   display: flex;
-  height: 30px;
+  height: var(--rom-scale-track-height);
   background: linear-gradient(90deg, 
     rgba(255, 100, 100, 0.2) 0%, 
     rgba(50, 50, 50, 0.3) 48%, 
     rgba(50, 50, 50, 0.3) 52%, 
     rgba(100, 255, 100, 0.2) 100%
   );
-  border-radius: 15px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: var(--rom-radius-full);
+  border: 1px solid var(--rom-border-tertiary);
   overflow: visible;
+  transition: all var(--rom-transition-normal) var(--rom-easing-standard);
+}
+
+.scale-track:hover {
+  border-color: var(--rom-border-primary);
+  box-shadow: var(--rom-shadow-sm);
 }
 
 .scale-half {
@@ -471,8 +633,8 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 10px;
-  font-size: 10px;
+  padding: 0 var(--rom-space-md);
+  font-size: var(--rom-font-size-xs);
 }
 
 .scale-left {
@@ -484,17 +646,17 @@
 }
 
 .scale-label {
-  color: #cccccc;
+  color: var(--rom-color-text-secondary);
   font-weight: 600;
   text-transform: uppercase;
-  font-size: 9px;
+  font-size: var(--rom-font-size-xs);
   letter-spacing: 0.3px;
 }
 
 .scale-limit {
-  color: #999999;
-  font-size: 9px;
-  font-family: monospace;
+  color: var(--rom-color-text-tertiary);
+  font-size: var(--rom-font-size-xs);
+  font-family: var(--rom-font-family);
 }
 
 .scale-center {
@@ -508,28 +670,31 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  z-index: 2;
 }
 
 .neutral-marker {
   position: absolute;
   top: -20px;
   background: transparent;
-  color: #000000;
+  color: var(--rom-color-text-primary);
   padding: 0;
-  border-radius: 3px;
-  font-size: 10px;
+  border-radius: var(--rom-radius-sm);
+  font-size: var(--rom-font-size-xs);
   font-weight: bold;
   white-space: nowrap;
+  text-shadow: 0 0 2px rgba(0, 0, 0, 0.8);
 }
 
 .position-indicator {
   position: absolute;
   top: 0;
-  height: 30px;
+  height: var(--rom-scale-track-height);
   width: 0;
   transform: translateX(-50%);
   z-index: 3;
   pointer-events: none;
+  transition: left var(--rom-transition-normal) var(--rom-easing-smooth);
 }
 
 .indicator-dot {
@@ -537,85 +702,99 @@
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  width: 16px;
-  height: 16px;
-  background: #00ffff;
-  border: 3px solid #ffffff;
+  width: var(--rom-indicator-size);
+  height: var(--rom-indicator-size);
+  background: var(--rom-color-primary);
+  border: var(--rom-indicator-border-width) solid var(--rom-color-text-primary);
   border-radius: 50%;
-  box-shadow: 0 0 10px rgba(0, 255, 255, 0.8), 0 0 20px rgba(0, 255, 255, 0.4);
-  animation: pulse-dot 1.5s ease-in-out infinite;
+  box-shadow: var(--rom-shadow-glow);
+  animation: rom-pulse-dot 1.5s var(--rom-easing-smooth) infinite;
+  transition: background var(--rom-transition-fast) var(--rom-easing-standard);
 }
 
-@keyframes pulse-dot {
+.indicator-dot:hover {
+  animation-play-state: paused;
+  transform: translate(-50%, -50%) scale(1.2);
+}
+
+@keyframes rom-pulse-dot {
   0%, 100% { 
     transform: translate(-50%, -50%) scale(1); 
-    box-shadow: 0 0 10px rgba(0, 255, 255, 0.8), 0 0 20px rgba(0, 255, 255, 0.4);
+    box-shadow: var(--rom-shadow-glow);
   }
   50% { 
-    transform: translate(-50%, -50%) scale(1.1); 
-    box-shadow: 0 0 15px rgba(0, 255, 255, 1), 0 0 30px rgba(0, 255, 255, 0.6);
+    transform: translate(-50%, -50%) scale(1.15); 
+    box-shadow: var(--rom-shadow-glow-strong);
   }
 }
 
 .scale-fill {
   position: absolute;
   top: 0;
-  height: 30px;
+  height: var(--rom-scale-track-height);
   background: linear-gradient(90deg, 
-    rgba(0, 255, 255, 0.3), 
+    rgba(0, 255, 255, var(--rom-scale-fill-opacity)), 
     rgba(0, 255, 255, 0.5)
   );
-  border-radius: 15px;
-  transition: all 0.2s ease;
+  border-radius: var(--rom-radius-full);
+  transition: all var(--rom-transition-normal) var(--rom-easing-smooth);
   z-index: 1;
   pointer-events: none;
 }
 
+/* ============================================
+   Utilization Info
+   ============================================ */
 .utilization-info {
   display: flex;
   justify-content: space-between;
-  margin-top: 8px;
-  font-size: 11px;
+  margin-top: var(--rom-space-sm);
+  font-size: var(--rom-font-size-sm);
 }
 
 .util-label {
-  color: #999999;
+  color: var(--rom-color-text-tertiary);
 }
 
 .util-value {
-  color: #00ff00;
+  color: var(--rom-color-secondary);
   font-weight: bold;
 }
 
 .util-value.warning {
-  color: #ff9900;
-  animation: pulse 1s infinite;
+  color: var(--rom-color-warning);
+  animation: rom-pulse 1s infinite;
 }
 
-/* Rotation Limits */
+/* ============================================
+   Rotation Limits
+   ============================================ */
 .rotation-limits {
-  margin: 15px 0;
+  margin: var(--rom-space-lg) 0;
 }
 
 .rotation-limits h5 {
-  margin: 0 0 10px 0;
-  font-size: 13px;
-  color: #00ff00;
+  margin: 0 0 var(--rom-space-md) 0;
+  font-size: var(--rom-font-size-md);
+  color: var(--rom-color-secondary);
   text-transform: uppercase;
 }
 
+/* ============================================
+   Manual Controls
+   ============================================ */
 .manual-controls {
-  margin-top: 15px;
-  padding: 10px;
+  margin-top: var(--rom-space-lg);
+  padding: var(--rom-space-md);
   background: rgba(0, 0, 0, 0.35);
   border: 1px solid rgba(0, 255, 255, 0.2);
-  border-radius: 6px;
+  border-radius: var(--rom-radius-md);
 }
 
 .manual-controls h5 {
-  margin: 0 0 10px 0;
-  font-size: 13px;
-  color: #00ffcc;
+  margin: 0 0 var(--rom-space-md) 0;
+  font-size: var(--rom-font-size-md);
+  color: var(--rom-color-accent);
   text-transform: uppercase;
 }
 
@@ -623,17 +802,17 @@
   display: grid;
   grid-template-columns: 140px 1fr 80px;
   align-items: center;
-  gap: 10px;
-  margin-bottom: 12px;
-  padding: 4px 0;
-  font-size: 13px;
+  gap: var(--rom-space-md);
+  margin-bottom: var(--rom-space-md);
+  padding: var(--rom-space-xs) 0;
+  font-size: var(--rom-font-size-md);
   color: #eeeeee;
 }
 
 .manual-row .axis {
-  color: #00ffff;
+  color: var(--rom-color-primary);
   font-weight: bold;
-  font-size: 13px;
+  font-size: var(--rom-font-size-md);
   text-shadow: 0 0 4px rgba(0, 255, 255, 0.5);
   letter-spacing: 0.3px;
 }
@@ -642,6 +821,11 @@
   width: 100%;
   height: 24px;
   cursor: pointer;
+  transition: opacity var(--rom-transition-fast) var(--rom-easing-standard);
+}
+
+.manual-row input[type='range']:hover {
+  opacity: 0.9;
 }
 
 .manual-value {
@@ -663,45 +847,49 @@
 }
 
 .limit-row .axis {
-  color: #00ffff;
+  color: var(--rom-color-primary);
   font-weight: bold;
-  font-size: 13px;
+  font-size: var(--rom-font-size-md);
   text-shadow: 0 0 4px rgba(0, 255, 255, 0.5);
   letter-spacing: 0.3px;
   min-width: 140px;
 }
 
 .limit-row .range {
-  color: #ffffff;
-  font-size: 13px;
+  color: var(--rom-color-text-primary);
+  font-size: var(--rom-font-size-md);
   font-weight: 500;
 }
 
-/* No Selection State */
+/* ============================================
+   No Selection State
+   ============================================ */
 .no-selection {
   text-align: center;
-  padding: 30px;
-  color: #cccccc;
+  padding: var(--rom-space-2xl);
+  color: var(--rom-color-text-secondary);
 }
 
 .no-selection p {
   margin: 0;
-  font-size: 14px;
+  font-size: var(--rom-font-size-base);
 }
 
-/* Constraint Violations */
+/* ============================================
+   Constraint Violations
+   ============================================ */
 .constraint-violations {
-  margin: 15px 0;
-  padding: 10px;
-  background: rgba(255, 153, 0, 0.1);
+  margin: var(--rom-space-lg) 0;
+  padding: var(--rom-space-md);
+  background: var(--rom-surface-warning-alpha);
   border: 1px solid rgba(255, 153, 0, 0.3);
-  border-radius: 4px;
+  border-radius: var(--rom-radius-sm);
 }
 
 .constraint-violations h5 {
-  margin: 0 0 10px 0;
-  font-size: 13px;
-  color: #ff9900;
+  margin: 0 0 var(--rom-space-md) 0;
+  font-size: var(--rom-font-size-md);
+  color: var(--rom-color-warning);
   text-transform: uppercase;
 }
 
@@ -714,55 +902,57 @@
 .violation-item {
   display: flex;
   justify-content: space-between;
-  padding: 6px;
-  margin: 4px 0;
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 4px;
-  font-size: 12px;
+  padding: var(--rom-space-xs);
+  margin: var(--rom-space-xs) 0;
+  background: var(--rom-bg-tertiary);
+  border-radius: var(--rom-radius-sm);
+  font-size: var(--rom-font-size-md);
 }
 
 .violation-item .bone {
-  color: #ffffff;
+  color: var(--rom-color-text-primary);
   flex: 1;
 }
 
 .violation-item .axis {
-  color: #00ffff;
-  margin: 0 10px;
+  color: var(--rom-color-primary);
+  margin: 0 var(--rom-space-md);
 }
 
 .violation-item .delta {
-  color: #ff9900;
+  color: var(--rom-color-warning);
   font-weight: bold;
 }
 
-/* Collision Summary */
+/* ============================================
+   Collision Summary
+   ============================================ */
 .collision-summary {
-  margin: 15px 0;
-  padding: 10px;
-  background: rgba(255, 0, 0, 0.1);
+  margin: var(--rom-space-lg) 0;
+  padding: var(--rom-space-md);
+  background: var(--rom-surface-error-alpha);
   border: 1px solid rgba(255, 0, 0, 0.3);
-  border-radius: 4px;
+  border-radius: var(--rom-radius-sm);
 }
 
 .collision-summary h5 {
-  margin: 0 0 10px 0;
-  font-size: 13px;
-  color: #ff0000;
+  margin: 0 0 var(--rom-space-md) 0;
+  font-size: var(--rom-font-size-md);
+  color: var(--rom-color-error);
   text-transform: uppercase;
 }
 
 .collision-stats {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: var(--rom-space-xs);
 }
 
 .stat {
   display: flex;
   justify-content: space-between;
-  padding: 6px;
-  border-radius: 4px;
+  padding: var(--rom-space-xs);
+  border-radius: var(--rom-radius-sm);
 }
 
 .stat.critical {
@@ -778,7 +968,7 @@
 }
 
 .stat .label {
-  color: #ffffff;
+  color: var(--rom-color-text-primary);
 }
 
 .stat .value {
@@ -786,11 +976,11 @@
 }
 
 .stat.critical .value {
-  color: #ff0000;
+  color: var(--rom-color-error);
 }
 
 .stat.warning .value {
-  color: #ff9900;
+  color: var(--rom-color-warning);
 }
 
 .stat.minor .value {
@@ -800,57 +990,65 @@
 .max-penetration {
   display: flex;
   justify-content: space-between;
-  margin-top: 8px;
-  padding: 6px;
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 4px;
+  margin-top: var(--rom-space-sm);
+  padding: var(--rom-space-xs);
+  background: var(--rom-bg-tertiary);
+  border-radius: var(--rom-radius-sm);
 }
 
 .max-penetration .label {
-  color: #cccccc;
-  font-size: 12px;
+  color: var(--rom-color-text-secondary);
+  font-size: var(--rom-font-size-md);
 }
 
 .max-penetration .value {
-  color: #ff0000;
+  color: var(--rom-color-error);
   font-weight: bold;
-  font-size: 12px;
+  font-size: var(--rom-font-size-md);
 }
 
-/* Panel Controls */
+/* ============================================
+   Panel Controls
+   ============================================ */
 .panel-controls {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  margin: 15px 0;
+  gap: var(--rom-space-md);
+  margin: var(--rom-space-lg) 0;
 }
 
 .control-btn {
-  padding: 12px;
+  padding: var(--rom-space-md);
   background: rgba(0, 255, 255, 0.2);
   border: 1px solid rgba(0, 255, 255, 0.5);
-  border-radius: 4px;
-  color: #ffffff;
-  font-family: 'Courier New', monospace;
-  font-size: 13px;
+  border-radius: var(--rom-radius-sm);
+  color: var(--rom-color-text-primary);
+  font-family: var(--rom-font-family);
+  font-size: var(--rom-font-size-md);
   font-weight: bold;
   text-transform: uppercase;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all var(--rom-transition-normal) var(--rom-easing-standard);
 }
 
 .control-btn:hover {
   background: rgba(0, 255, 255, 0.3);
   border-color: rgba(0, 255, 255, 0.8);
   transform: translateY(-2px);
+  box-shadow: var(--rom-shadow-sm);
 }
 
 .control-btn:active {
   transform: translateY(0);
 }
 
+.control-btn:focus-visible {
+  outline: 2px solid var(--rom-color-primary);
+  outline-offset: 2px;
+}
+
 .control-btn.active {
-  background: rgba(0, 255, 0, 0.2);
+  background: var(--rom-surface-secondary-alpha);
   border-color: rgba(0, 255, 0, 0.5);
 }
 
@@ -859,44 +1057,48 @@
   border-color: rgba(0, 255, 0, 0.8);
 }
 
-/* Educational Info */
+/* ============================================
+   Educational Info
+   ============================================ */
 .educational-info {
-  margin: 15px 0 0 0;
-  padding: 12px;
-  background: rgba(0, 0, 255, 0.1);
+  margin: var(--rom-space-lg) 0 0 0;
+  padding: var(--rom-space-md);
+  background: var(--rom-surface-info-alpha);
   border: 1px solid rgba(0, 100, 255, 0.3);
-  border-radius: 4px;
+  border-radius: var(--rom-radius-sm);
 }
 
 .educational-info h5 {
-  margin: 0 0 10px 0;
-  font-size: 13px;
-  color: #00aaff;
+  margin: 0 0 var(--rom-space-md) 0;
+  font-size: var(--rom-font-size-md);
+  color: var(--rom-color-info);
   text-transform: uppercase;
 }
 
 .info-text {
-  font-size: 11px;
+  font-size: var(--rom-font-size-sm);
   line-height: 1.5;
-  color: #cccccc;
-  margin: 8px 0;
+  color: var(--rom-color-text-secondary);
+  margin: var(--rom-space-sm) 0;
 }
 
 .info-text strong {
-  color: #ffffff;
+  color: var(--rom-color-text-primary);
 }
 
-/* Performance Monitor */
+/* ============================================
+   Performance Monitor
+   ============================================ */
 .performance-monitor {
   position: fixed;
-  top: 20px;
-  left: 20px;
+  top: var(--rom-space-xl);
+  left: var(--rom-space-xl);
   display: flex;
-  gap: 15px;
-  background: rgba(0, 0, 0, 0.85);
-  padding: 10px 15px;
-  border-radius: 4px;
-  border: 1px solid rgba(0, 255, 255, 0.3);
+  gap: var(--rom-space-lg);
+  background: var(--rom-bg-primary);
+  padding: var(--rom-space-md) var(--rom-space-lg);
+  border-radius: var(--rom-radius-sm);
+  border: 1px solid var(--rom-border-primary);
   -webkit-backdrop-filter: blur(10px);
   backdrop-filter: blur(10px);
   z-index: 1000;
@@ -904,23 +1106,106 @@
 
 .perf-stat {
   display: flex;
-  gap: 8px;
+  gap: var(--rom-space-sm);
   align-items: center;
 }
 
 .perf-stat .label {
-  color: #00ffff;
-  font-size: 12px;
-  font-family: 'Courier New', monospace;
+  color: var(--rom-color-primary);
+  font-size: var(--rom-font-size-md);
+  font-family: var(--rom-font-family);
 }
 
 .perf-stat .value {
-  color: #00ff00;
-  font-size: 14px;
+  color: var(--rom-color-secondary);
+  font-size: var(--rom-font-size-base);
   font-weight: bold;
-  font-family: 'Courier New', monospace;
+  font-family: var(--rom-font-family);
 }
 
+/* ============================================
+   Dynamic Position Classes
+   ============================================ */
+
+/* Apply dynamic positions using CSS custom properties */
+.scale-center {
+  left: var(--neutral-pos, 50%);
+}
+
+.position-indicator {
+  left: var(--indicator-pos, 50%);
+}
+
+.scale-fill {
+  width: var(--fill-width, 0%);
+  left: var(--fill-left, 50%);
+}
+
+/* ============================================
+   Accessibility Support
+   ============================================ */
+
+/* Reduced Motion Support */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  
+  .indicator-dot {
+    animation: none;
+  }
+  
+  .max-util .value.warning,
+  .util-value.warning {
+    animation: none;
+  }
+}
+
+/* Focus Styles for Keyboard Navigation */
+.rom-panel-header:focus-visible,
+.collapse-btn:focus-visible,
+.rom-bone-card:focus-visible {
+  outline: 2px solid var(--rom-color-primary);
+  outline-offset: 2px;
+}
+
+/* High Contrast Mode Support */
+@media (prefers-contrast: high) {
+  .rom-panel {
+    border-width: 3px;
+  }
+  
+  .indicator-dot {
+    border-width: 4px;
+  }
+  
+  .axis-label,
+  .biomech-label {
+    font-weight: 900;
+  }
+}
+
+/* Print Styles */
+@media print {
+  .rom-panel {
+    position: static;
+    max-height: none;
+    border: 2px solid #000;
+    page-break-inside: avoid;
+  }
+  
+  .collapse-btn {
+    display: none;
+  }
+  
+  .indicator-dot {
+    animation: none;
+  }
+}
 .perf-stat .value.warning {
   color: #ff9900;
   animation: pulse 1s infinite;
