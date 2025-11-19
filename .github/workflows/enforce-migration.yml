@@ -1,0 +1,146 @@
+name: Enforce Biomechanics Migration
+
+on:
+    push:
+        branches: [main, develop]
+    pull_request:
+        branches: [main, develop]
+
+jobs:
+    check-legacy-code:
+        name: Check for Legacy Constraint Code
+        runs-on: ubuntu-latest
+
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v3
+
+            - name: Check for legacy validateRotation usage
+              run: |
+                  echo "🔍 Checking for legacy validateRotation() calls..."
+                  # Allow in deprecated files and tests, but not in active code
+                  if grep -r "validateRotation" src/ \
+                    --include="*.ts" \
+                    --include="*.tsx" \
+                    --exclude="**/constraints/constraintValidator.ts" \
+                    --exclude="**/__tests__/*" \
+                    --exclude="*.test.ts" \
+                    --exclude="*.test.tsx" | grep -v "@deprecated" | grep -v "// LEGACY"; then
+                    echo "❌ MIGRATION VIOLATION: validateRotation() still used in active code"
+                    echo "📖 See docs/MIGRATION_COMMITMENT.md for migration guide"
+                    echo "✅ Use: biomechState.computeJointState() instead"
+                    exit 1
+                  fi
+                  echo "✅ No legacy validateRotation() found"
+
+            - name: Check for legacy getRelativeEuler usage
+              run: |
+                  echo "🔍 Checking for legacy getRelativeEuler() calls..."
+                  if grep -r "getRelativeEuler" src/ \
+                    --include="*.ts" \
+                    --include="*.tsx" \
+                    --exclude="**/constraints/constraintValidator.ts" \
+                    --exclude="**/__tests__/*" \
+                    --exclude="*.test.ts" | grep -v "@deprecated" | grep -v "// LEGACY"; then
+                    echo "❌ MIGRATION VIOLATION: getRelativeEuler() still used in active code"
+                    echo "✅ Use: qSpaceEngine.computeJointState() instead"
+                    exit 1
+                  fi
+                  echo "✅ No legacy getRelativeEuler() found"
+
+            - name: Check for legacy analyzeShoulderKinematics usage
+              run: |
+                  echo "🔍 Checking for legacy analyzeShoulderKinematics() calls..."
+                  if grep -r "analyzeShoulderKinematics" src/ \
+                    --include="*.ts" \
+                    --include="*.tsx" \
+                    --exclude="**/constraints/shoulderKinematics.ts" \
+                    --exclude="**/__tests__/*" \
+                    --exclude="*.test.ts" | grep -v "@deprecated" | grep -v "// LEGACY"; then
+                    echo "❌ MIGRATION VIOLATION: analyzeShoulderKinematics() still used"
+                    echo "✅ Use: shoulderMapping.ghToClinical() + stToClinical() instead"
+                    exit 1
+                  fi
+                  echo "✅ No legacy shoulder kinematics found"
+
+            - name: Check feature flag expiration (Phase 3+)
+              if: github.ref == 'refs/heads/main'
+              run: |
+                  echo "🔍 Checking if feature flag should be removed..."
+                  # Calculate days since Phase 1 complete (Nov 19, 2025)
+                  phase1_complete="2025-11-19"
+                  current_date=$(date +%Y-%m-%d)
+                  days_elapsed=$(( ( $(date -d "$current_date" +%s) - $(date -d "$phase1_complete" +%s) ) / 86400 ))
+
+                  # After 45 days (Week 6 complete), feature flag should be gone
+                  if [ $days_elapsed -gt 45 ]; then
+                    if grep -r "useCoordinateEngine" src/ --include="*.ts" --include="*.tsx"; then
+                      echo "⚠️ WARNING: Week 6 deadline passed, feature flag should be removed"
+                      echo "📅 Days since Phase 1: $days_elapsed (deadline: 45 days)"
+                      echo "📖 See docs/MIGRATION_COMMITMENT.md section: 'Forcing Functions'"
+                      # Uncomment after December 31, 2025 to enforce:
+                      # exit 1
+                    fi
+                  else
+                    echo "✅ Still in migration window ($days_elapsed/45 days)"
+                  fi
+
+            - name: Verify biomech architecture exists
+              run: |
+                  echo "🔍 Verifying new biomech architecture is present..."
+                  required_files=(
+                    "src/biomech/model/types.ts"
+                    "src/biomech/model/segments.ts"
+                    "src/biomech/model/joints.ts"
+                    "src/biomech/engine/segmentRegistry.ts"
+                    "src/biomech/engine/qSpaceEngine.ts"
+                    "src/biomech/mapping/shoulderMapping.ts"
+                  )
+
+                  all_exist=true
+                  for file in "${required_files[@]}"; do
+                    if [ ! -f "$file" ]; then
+                      echo "❌ Missing required file: $file"
+                      all_exist=false
+                    fi
+                  done
+
+                  if [ "$all_exist" = false ]; then
+                    echo "❌ MIGRATION ERROR: New biomech architecture incomplete"
+                    exit 1
+                  fi
+                  echo "✅ All biomech architecture files present"
+
+            - name: Migration status summary
+              run: |
+                  echo ""
+                  echo "═══════════════════════════════════════════════"
+                  echo "📊 MIGRATION STATUS SUMMARY"
+                  echo "═══════════════════════════════════════════════"
+                  echo ""
+
+                  # Count legacy usage
+                  legacy_count=$(grep -r "validateRotation\|getRelativeEuler\|analyzeShoulderKinematics" src/ \
+                    --include="*.ts" \
+                    --include="*.tsx" \
+                    --exclude="**/constraints/*.ts" \
+                    --exclude="**/__tests__/*" 2>/dev/null | wc -l || echo "0")
+
+                  echo "🔢 Legacy function calls in active code: $legacy_count"
+
+                  if [ "$legacy_count" -eq 0 ]; then
+                    echo "✅ STATUS: Migration complete (or Phase 2 not started)"
+                  else
+                    echo "⏳ STATUS: Migration in progress"
+                    echo "📖 Target: Zero legacy calls by Week 6"
+                  fi
+
+                  echo ""
+                  echo "📅 Timeline:"
+                  echo "   Phase 1: ✅ Complete (Biomech architecture built)"
+                  echo "   Phase 2: 🎯 Integration (Weeks 1-3)"
+                  echo "   Phase 3: ⏳ Migration (Weeks 4-6)"
+                  echo "   Phase 4: ⏳ Validation (Week 7)"
+                  echo ""
+                  echo "📖 Full plan: docs/MIGRATION_COMMITMENT.md"
+                  echo "═══════════════════════════════════════════════"

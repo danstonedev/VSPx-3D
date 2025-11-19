@@ -40,3 +40,64 @@ export function viewerDebugEnabled(): boolean {
   } catch { /* ignore */ }
   return false
 }
+
+/**
+ * Feature flag: Use new coordinate engine (q-space biomechanics)
+ * 
+ * MIGRATION DEADLINE: December 15, 2025
+ * After this date, the new coordinate engine becomes MANDATORY.
+ * See docs/MIGRATION_COMMITMENT.md for full migration plan.
+ * 
+ * When enabled, uses the new OpenSim-compatible coordinate system with:
+ * - Proper ST + GH joint separation
+ * - Generalized coordinates (q₀, q₁, q₂)
+ * - Coordinate-level ROM constraints
+ * 
+ * Enable via: ?coordinateEngine=1 or localStorage.setItem('feature.coordinateEngine', 'true')
+ */
+export function useCoordinateEngine(): boolean {
+  // FORCING FUNCTION: Auto-enable after migration deadline
+  const migrationDeadline = new Date('2025-12-15T00:00:00')
+  const now = new Date()
+  
+  if (now > migrationDeadline) {
+    console.warn('⚠️ MIGRATION DEADLINE PASSED: Coordinate engine now MANDATORY')
+    console.warn('📖 Legacy constraint system disabled. See docs/MIGRATION_COMMITMENT.md')
+    return true
+  }
+  
+  // TEMPORARY: Auto-enable for Phase 2 testing (remove after migration)
+  console.log('🧬 Coordinate engine AUTO-ENABLED for Phase 2 testing')
+  return true;
+  
+  /* eslint-disable no-unreachable */
+  // During migration period (Phase 2-3), respect manual flag
+  try {
+    const envVal = (import.meta as any)?.env?.VITE_USE_COORDINATE_ENGINE
+    if (truthy(envVal)) {
+      console.log('🧬 Coordinate engine enabled via VITE_USE_COORDINATE_ENGINE')
+      return true
+    }
+  } catch { /* ignore */ }
+  try {
+    const params = new URLSearchParams(window.location.search)
+    const coordEngineParam = params.get('coordinateEngine')
+    console.log(`🔍 URL search: "${window.location.search}"`)
+    console.log(`🔍 coordinateEngine param: "${coordEngineParam}"`)
+    if (truthy(coordEngineParam)) {
+      console.log('🧬 Coordinate engine enabled via URL parameter')
+      return true
+    }
+  } catch (e) { 
+    console.error('Error reading URL params:', e)
+  }
+  try {
+    const fromStorage = window.localStorage?.getItem('feature.coordinateEngine')
+    if (truthy(fromStorage)) {
+      console.log('🧬 Coordinate engine enabled via localStorage')
+      return true
+    }
+  } catch { /* ignore */ }
+  return false
+  /* eslint-enable no-unreachable */
+}

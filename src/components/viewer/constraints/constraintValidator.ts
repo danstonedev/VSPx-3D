@@ -67,11 +67,21 @@ function getRestQuaternion(bone: THREE.Bone): THREE.Quaternion {
   // Fall back to legacy captured pose
   const cached = constraintReferencePose.get(bone.name);
   if (!cached) {
-    throw new Error(`❌ No constraint reference pose for ${bone.name}. Call initializeNeutralPoseReference() or captureConstraintReferencePose() first!`);
+    // If no reference pose exists, assume current pose is rest pose (fallback)
+    // This prevents crashes when initializing UI before capture is complete
+    console.warn(`⚠️ No constraint reference pose for ${bone.name}. Using current pose as fallback.`);
+    const currentPose = bone.quaternion.clone();
+    constraintReferencePose.set(bone.name, currentPose);
+    return currentPose;
   }
   return cached;
 }
 
+/**
+ * @deprecated Use qSpaceEngine.computeJointState() from Phase 2 coordinate system instead.
+ * Legacy bone-level Euler calculation. New system uses coordinate-level quaternion math.
+ * See docs/LEGACY_CODE_CLEANUP.md for migration guide.
+ */
 export function getRelativeEuler(bone: THREE.Bone): THREE.Euler {
   const restQuat = getRestQuaternion(bone);
   const restInverse = restQuat.clone().invert();
@@ -134,6 +144,10 @@ function clamp(value: number, min: number, max: number): number {
 
 /**
  * Validate and clamp a bone's rotation to its defined constraints
+ * 
+ * @deprecated Use BiomechState.computeJointState() from Phase 2 coordinate system instead.
+ * This legacy bone-level validation uses Euler angles and cannot handle ST+GH shoulder separation.
+ * Kept for backward compatibility during migration. See docs/LEGACY_CODE_CLEANUP.md
  * 
  * @param bone - The THREE.Bone to validate
  * @param constraint - The joint constraint to apply (optional, will look up if not provided)
@@ -208,6 +222,10 @@ export function validateRotation(
 
 /**
  * Apply constraints to an entire skeleton
+ * 
+ * @deprecated Use BiomechState.update() from Phase 2 coordinate system instead.
+ * Legacy bone-level constraint application. New system validates at coordinate-level.
+ * See docs/LEGACY_CODE_CLEANUP.md for migration guide.
  * 
  * @param skeleton - The THREE.Skeleton to validate
  * @param onlyEnabled - If true, only validate bones with enabled constraints

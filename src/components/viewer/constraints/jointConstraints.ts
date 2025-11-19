@@ -44,6 +44,16 @@ const deg = (degrees: number): number => (degrees * Math.PI) / 180;
 /**
  * Full-body joint constraint library for Mixamo-rigged characters
  * 
+ * @deprecated ROM constraints are migrating to coordinate-level definitions (Phase 2).
+ * This bone-level constraint system uses Euler angle limits and cannot represent:
+ * - Scapulothoracic (ST) joint separation for shoulder
+ * - Anatomically correct coordinate frames (q-space)
+ * - Generalized coordinates matching OpenSim/Simbody standards
+ * 
+ * KEEP for reference: Clinical ROM values are validated and useful.
+ * New system uses src/biomech/model/joints.ts with coordinate-level constraints.
+ * See docs/LEGACY_CODE_CLEANUP.md for migration path.
+ * 
  * Naming convention: Mixamo rigs use 'mixamorig1' prefix
  * Coordinate systems are approximate and may need adjustment based on specific rig orientation
  */

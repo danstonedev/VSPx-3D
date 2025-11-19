@@ -14,7 +14,12 @@ import {
   getPlaneName
 } from '../constraints/shoulderKinematics';
 import { computeBiomechAnglesForSelectedBone } from '../biomech/jointAngles';
+import type { BiomechState } from '../../../biomech/engine/biomechState';
+import { getAllJoints, getParentJoint } from '../../../biomech/model/joints';
+import { getSegmentByBoneName } from '../../../biomech/model/segments';
+import { computeScapulohumeralRhythm, ghToClinical, stToClinical } from '../../../biomech/mapping/shoulderMapping';
 import { viewerDebugEnabled } from '../utils/debugFlags';
+import { CoordinateDisplay } from './CoordinateDisplay';
 import './RangeOfMotionPanel.css';
 
 /**
@@ -157,9 +162,9 @@ function getBiomechMovementLabel(boneName: string, axis: 'x' | 'y' | 'z'): strin
   // For major joints covered by biomech system
   if (boneName.includes('Arm') && !boneName.includes('ForeArm')) {
     // Shoulder/Humerus
-    if (axis === 'x') return 'ABD/ADD';
-    if (axis === 'y') return 'INT ROT/EXT ROT';
-    return 'FLEX/EXT';
+    if (axis === 'x') return 'INT ROT/EXT ROT';
+    if (axis === 'y') return 'FLEX/EXT';
+    return 'ABD/ADD';
   }
   
   if (boneName.includes('UpLeg')) {
@@ -191,6 +196,13 @@ function getBiomechMovementLabel(boneName: string, axis: 'x' | 'y' | 'z'): strin
     if (axis === 'x') return 'INVERSION/EVERSION';
     if (axis === 'y') return 'INT ROT/EXT ROT';
     return 'DORSIFLEXION/PLANTARFLEXION';
+  }
+  
+  if (boneName.includes('Shoulder')) {
+    // SC Joint (Clavicle)
+    if (axis === 'x') return 'AXIAL ROT';
+    if (axis === 'y') return 'PROTRACTION/RETRACTION';
+    return 'ELEVATION/DEPRESSION';
   }
   
   // Fallback to old system for non-biomech joints
@@ -267,9 +279,41 @@ function getCompositeShoulderMotion(
   return { composite, scapular, glenohumeral, side };
 }
 
+type ROMMode = 'bone' | 'coordinate' | 'both';
+
+type ShoulderSummary = {
+  side: 'left' | 'right';
+  ratio: number;
+  isNormal: boolean;
+  ghElevation: number;
+  ghPlane: number;
+  ghRotation: number;
+  stUpward: number;
+  totalElevation: number;
+};
+
+const SHOULDER_COORD_IDS = {
+  right: {
+    gh: ['gh_r_flexion', 'gh_r_abduction', 'gh_r_rotation'] as const,
+    st: ['st_r_tilt', 'st_r_rotation', 'st_r_upward'] as const,
+  },
+  left: {
+    gh: ['gh_l_flexion', 'gh_l_abduction', 'gh_l_rotation'] as const,
+    st: ['st_l_tilt', 'st_l_rotation', 'st_l_upward'] as const,
+  },
+};
+
+function inferShoulderSide(bone: THREE.Bone | null): 'left' | 'right' {
+  if (!bone) return 'right';
+  if (bone.name.toLowerCase().includes('left')) return 'left';
+  if (bone.name.toLowerCase().includes('right')) return 'right';
+  return 'right';
+}
+
 interface RangeOfMotionPanelProps {
   selectedBone: THREE.Bone | null;
   skeleton: THREE.Skeleton | null;
+  biomechState?: BiomechState | null;
   constraintViolations: ConstraintViolation[];
   onResetPose?: () => void;
   onToggleConstraints?: () => void;
@@ -280,6 +324,7 @@ interface RangeOfMotionPanelProps {
 export function RangeOfMotionPanel({
   selectedBone,
   skeleton,
+  biomechState = null,
   constraintViolations,
   onResetPose,
   onToggleConstraints,
@@ -289,8 +334,12 @@ export function RangeOfMotionPanel({
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [collisionData, setCollisionData] = useState<CollisionResult | null>(null);
   const [jointAngles, setJointAngles] = useState<{ x: number; y: number; z: number } | null>(null);
+  const [jointCoordinates, setJointCoordinates] = useState<Record<string, number> | null>(null);
+  const [localCoordinates, setLocalCoordinates] = useState<Record<string, number> | null>(null);
   const [manualAngles, setManualAngles] = useState<{ x: number; y: number; z: number }>({ x: 0, y: 0, z: 0 });
-  const [activeAxis, setActiveAxis] = useState<'x' | 'y' | 'z' | null>(null);
+  const [activeAxis, setActiveAxis] = useState<'x' | 'y' | 'z' | string | null>(null);
+  const [romMode, setRomMode] = useState<ROMMode>(() => (biomechState ? 'both' : 'bone'));
+  const [shoulderSummary, setShoulderSummary] = useState<ShoulderSummary | null>(null);
   const normalizedViolations = useMemo(() => {
     if (!constraintViolations?.length) return [];
     return constraintViolations.flatMap((entry, entryIndex) => {
@@ -308,6 +357,13 @@ export function RangeOfMotionPanel({
       });
     });
   }, [constraintViolations]);
+  const biomechJoints = useMemo(() => getAllJoints(), []);
+
+  useEffect(() => {
+    if (!biomechState && romMode !== 'bone') {
+      setRomMode('bone');
+    }
+  }, [biomechState, romMode]);
   
   // Update collision data periodically
   useEffect(() => {
@@ -320,12 +376,65 @@ export function RangeOfMotionPanel({
     
     return () => clearInterval(interval);
   }, [skeleton]);
+
+  useEffect(() => {
+    if (!biomechState || !biomechState.isCalibrated()) {
+      setShoulderSummary(null);
+      return;
+    }
+
+    let mounted = true;
+
+    const updateSummary = () => {
+      if (!mounted) return;
+      const side = inferShoulderSide(selectedBone);
+      const ghState = biomechState.getJointState(side === 'left' ? 'gh_left' : 'gh_right');
+      const stState = biomechState.getJointState(side === 'left' ? 'st_left' : 'st_right');
+      if (!ghState || !stState) {
+        setShoulderSummary(null);
+        return;
+      }
+
+      const ghIds = SHOULDER_COORD_IDS[side].gh;
+      const stIds = SHOULDER_COORD_IDS[side].st;
+      const ghValues = ghIds.map((id) => ghState.coordinates[id]?.value ?? null);
+      const stValues = stIds.map((id) => stState.coordinates[id]?.value ?? null);
+
+      if (ghValues.some((v) => typeof v !== 'number') || stValues.some((v) => typeof v !== 'number')) {
+        setShoulderSummary(null);
+        return;
+      }
+
+      const ghClinical = ghToClinical(ghValues[0] as number, ghValues[1] as number, ghValues[2] as number);
+      const stClinical = stToClinical(stValues[0] as number, stValues[1] as number, stValues[2] as number);
+      const rhythm = computeScapulohumeralRhythm(ghClinical.angles.elevation, stClinical.angles.upwardRotation);
+
+      setShoulderSummary({
+        side,
+        ratio: rhythm.ratio,
+        isNormal: rhythm.isNormal,
+        ghElevation: ghClinical.angles.elevation,
+        ghPlane: ghClinical.angles.plane,
+        ghRotation: ghClinical.angles.rotation,
+        stUpward: stClinical.angles.upwardRotation,
+        totalElevation: rhythm.totalElevation,
+      });
+    };
+
+    updateSummary();
+    const timer = window.setInterval(updateSummary, 150);
+    return () => {
+      mounted = false;
+      window.clearInterval(timer);
+    };
+  }, [biomechState, selectedBone]);
   
   // Update joint angles and utilization when bone changes
   useEffect(() => {
     if (!selectedBone) {
       setJointAngles(null);
       setActiveAxis(null);
+      setLocalCoordinates(null); // Reset local coordinates when bone changes
       return;
     }
     
@@ -361,8 +470,23 @@ export function RangeOfMotionPanel({
           y: biomechData.angles.rotation,     // PRONATION/SUPINATION
           z: biomechData.angles.abdAdd        // VARUS/VALGUS (carrying angle)
         };
+      } else if (selectedBone.name.includes('Arm') && !selectedBone.name.includes('ForeArm')) {
+        // Shoulder/Humerus - Updated mapping for ZXY order
+        displayAngles = {
+          x: biomechData.angles.rotation,     // X = Rotation
+          y: biomechData.angles.flexExt,      // Y = Flexion
+          z: biomechData.angles.abdAdd        // Z = Abduction
+        };
+      } else if (selectedBone.name.includes('Shoulder')) {
+        // SC Joint (Clavicle)
+        // X=Axial, Y=Protraction, Z=Elevation
+        displayAngles = {
+          x: biomechData.angles.flexExt,      // Mapped to X in jointAngles.ts (needs verification)
+          y: biomechData.angles.rotation,     // Mapped to Y
+          z: biomechData.angles.abdAdd        // Mapped to Z
+        };
       } else {
-        // Standard mapping for hip, shoulder, knee, ankle
+        // Standard mapping for hip, knee, ankle
         displayAngles = {
           x: biomechData.angles.abdAdd,       // ABD/ADD
           y: biomechData.angles.rotation,     // Internal/External rotation
@@ -379,6 +503,25 @@ export function RangeOfMotionPanel({
       }
       
       setJointAngles(displayAngles);
+
+      // Update coordinate values if biomechState is available
+      if (biomechState && biomechState.isCalibrated()) {
+        const segment = getSegmentByBoneName(selectedBone.name);
+        const joint = segment ? getParentJoint(segment.id) : null;
+        if (joint) {
+          const jointState = biomechState.getJointState(joint.id);
+          if (jointState) {
+            const coords: Record<string, number> = {};
+            joint.coordinates.forEach(coord => {
+              const val = jointState.coordinates[coord.id]?.value ?? 0;
+              coords[coord.id] = THREE.MathUtils.radToDeg(val);
+            });
+            setJointCoordinates(coords);
+          }
+        } else {
+          setJointCoordinates(null);
+        }
+      }
     };
     
     // Initial update
@@ -426,16 +569,125 @@ export function RangeOfMotionPanel({
     [selectedBone, skeleton]
   );
 
+  const applyCoordinateChange = useCallback(
+    (coordId: string, valueDeg: number) => {
+      if (!selectedBone || !biomechState || !biomechState.isCalibrated()) return;
+      
+      const segment = getSegmentByBoneName(selectedBone.name);
+      const joint = segment ? getParentJoint(segment.id) : null;
+      if (!joint) return;
+
+      // Use local coordinates if active, otherwise initialize from current read-back
+      // This prevents "drift" where small read-back errors accumulate when modifying one axis
+      const baseCoords = localCoordinates || jointCoordinates || {};
+      const newCoords = { ...baseCoords, [coordId]: valueDeg };
+      
+      setLocalCoordinates(newCoords);
+      
+      // Construct the [q0, q1, q2] array expected by applyCoordinates
+      const qValues: [number, number, number] = [0, 0, 0];
+      
+      joint.coordinates.forEach(coord => {
+        const valDeg = newCoords[coord.id] ?? 0;
+        if (coord.index >= 0 && coord.index < 3) {
+            qValues[coord.index] = THREE.MathUtils.degToRad(valDeg);
+        }
+      });
+
+      // Apply to biomech state (which updates skeleton)
+      biomechState.applyCoordinates(joint.id, qValues);
+      
+      // Update local state immediately for responsiveness
+      // setJointCoordinates(newCoords); // No longer needed as we use localCoordinates for UI
+    },
+    [selectedBone, biomechState, jointCoordinates, localCoordinates]
+  );
+
   const handleJointReset = useCallback(() => {
     if (!selectedBone) return;
     resetBoneToRest(selectedBone);
     selectedBone.updateMatrixWorld(true);
     skeleton?.bones.forEach((bone) => bone.updateMatrixWorld(true));
     setManualAngles({ x: 0, y: 0, z: 0 });
+    setLocalCoordinates(null); // Clear local override on reset
   }, [selectedBone, skeleton]);
   
   const collisionSummary = collisionData ? getCollisionSummary(collisionData) : null;
   const constraint = selectedBone ? getConstraintForBone(selectedBone.name) : null;
+  const coordinatePanel = (
+    <div className="coordinate-panel">
+      <h4>Coordinate-Level ROM</h4>
+      {!biomechState && (
+        <p className="coordinate-panel-note">
+          Enable the coordinate engine feature flag to inspect q-space coordinates.
+        </p>
+      )}
+
+      {biomechState && (
+        <>
+          {!biomechState.isCalibrated() && (
+            <p className="coordinate-panel-note">
+              Load the Neutral pose to calibrate and unlock coordinate readouts.
+            </p>
+          )}
+
+          {biomechState.isCalibrated() && (
+            <>
+              {shoulderSummary ? (
+                <div className="scap-summary-card">
+                  <div className="scap-summary-header">
+                    <h5>
+                      Scapulohumeral Rhythm ({shoulderSummary.side === 'left' ? 'Left' : 'Right'})
+                    </h5>
+                    <span className={`scap-status ${shoulderSummary.isNormal ? 'ok' : 'warning'}`}>
+                      {shoulderSummary.isNormal ? '✓ Normal' : '⚠️ Out of Range'}
+                    </span>
+                  </div>
+                  <div className="scap-summary-grid">
+                    <div>
+                      <span className="scap-label">GH Elevation</span>
+                      <span className="scap-value">{shoulderSummary.ghElevation.toFixed(1)}°</span>
+                    </div>
+                    <div>
+                      <span className="scap-label">ST Upward Rot.</span>
+                      <span className="scap-value">{shoulderSummary.stUpward.toFixed(1)}°</span>
+                    </div>
+                    <div>
+                      <span className="scap-label">Ratio</span>
+                      <span className="scap-value">{shoulderSummary.ratio.toFixed(2)}:1</span>
+                    </div>
+                    <div>
+                      <span className="scap-label">Total Elevation</span>
+                      <span className="scap-value">{shoulderSummary.totalElevation.toFixed(1)}°</span>
+                    </div>
+                  </div>
+                  <p className="scap-summary-note">
+                    Plane {shoulderSummary.ghPlane.toFixed(1)}° · Rotation {shoulderSummary.ghRotation.toFixed(1)}°
+                  </p>
+                </div>
+              ) : (
+                <p className="coordinate-panel-note">
+                  Select a shoulder joint to monitor scapulohumeral rhythm.
+                </p>
+              )}
+
+              <div className="coordinate-display-grid">
+                {biomechJoints.map((joint) => (
+                  <CoordinateDisplay
+                    key={joint.id}
+                    jointId={joint.id}
+                    biomechState={biomechState}
+                    showClinical={joint.id.startsWith('gh_') || joint.id.startsWith('st_')}
+                    defaultExpanded={joint.id.startsWith('gh_') || joint.id.startsWith('st_')}
+                  />
+                ))}
+              </div>
+            </>
+          )}
+        </>
+      )}
+    </div>
+  );
   
   return (
     <div className={`rom-panel ${isCollapsed ? 'collapsed' : ''}`}>
@@ -446,9 +698,32 @@ export function RangeOfMotionPanel({
       
       {!isCollapsed && (
         <div className="rom-panel-content">
-          {/* Bone Information */}
-          {selectedBone && constraint ? (
-            <div className="bone-info">
+          <div className="rom-mode-toggle">
+            <span className="rom-mode-label">ROM Mode</span>
+            <div className="rom-mode-buttons">
+              {([
+                { key: 'bone', label: 'Bone-Level' },
+                { key: 'coordinate', label: 'Coordinate-Level' },
+                { key: 'both', label: 'Dual View' },
+              ] as Array<{ key: ROMMode; label: string }>).map(({ key, label }) => (
+                <button
+                  key={key}
+                  type="button"
+                  className={`rom-mode-btn ${romMode === key ? 'active' : ''}`}
+                  onClick={() => setRomMode(key)}
+                  disabled={key !== 'bone' && !biomechState}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className={`rom-layout rom-mode-${romMode}`}>
+            <div className="rom-column bone-column">
+              {/* Bone Information */}
+              {selectedBone && constraint ? (
+                <div className="bone-info">
               <h4>Selected Joint</h4>
               <p className="bone-name">{selectedBone.name}</p>
               
@@ -487,8 +762,19 @@ export function RangeOfMotionPanel({
                         biomechValue = axis === 'x' ? biomechData.angles.flexExt :
                                       axis === 'y' ? biomechData.angles.rotation :
                                       biomechData.angles.abdAdd;
+                      } else if (selectedBone.name.includes('Arm') && !selectedBone.name.includes('ForeArm')) {
+                        // Shoulder/Humerus - Updated mapping for ZXY order
+                        biomechValue = axis === 'x' ? biomechData.angles.rotation :
+                                      axis === 'y' ? biomechData.angles.flexExt :
+                                      biomechData.angles.abdAdd;
+                      } else if (selectedBone.name.includes('Shoulder')) {
+                        // SC Joint (Clavicle)
+                        // X=Axial, Y=Protraction, Z=Elevation
+                        biomechValue = axis === 'x' ? biomechData.angles.flexExt :
+                                      axis === 'y' ? biomechData.angles.rotation :
+                                      biomechData.angles.abdAdd;
                       } else {
-                        // Standard mapping for hip, shoulder, knee, ankle
+                        // Standard mapping for hip, knee, ankle
                         biomechValue = axis === 'x' ? biomechData.angles.abdAdd :
                                       axis === 'y' ? biomechData.angles.rotation :
                                       biomechData.angles.flexExt;
@@ -513,9 +799,14 @@ export function RangeOfMotionPanel({
                       // Customize based on joint and axis
                       if (selectedBone.name.includes('Arm') && !selectedBone.name.includes('ForeArm')) {
                         // Shoulder/Humerus - AAOS clinical ROM standards
-                        if (axis === 'x') { minAngle = -45; maxAngle = 180; }  // ABD 0-180°, ADD 0-45°
-                        if (axis === 'y') { minAngle = -90; maxAngle = 90; }   // INT ROT -90° to EXT ROT +90°
-                        if (axis === 'z') { minAngle = -60; maxAngle = 180; }  // FLEX 0-180°, EXT 0-60°
+                        if (axis === 'x') { minAngle = -90; maxAngle = 90; }   // INT ROT -90° to EXT ROT +90°
+                        if (axis === 'y') { minAngle = -60; maxAngle = 180; }  // FLEX 0-180°, EXT 0-60°
+                        if (axis === 'z') { minAngle = -45; maxAngle = 180; }  // ABD 0-180°, ADD 0-45°
+                      } else if (selectedBone.name.includes('Shoulder')) {
+                        // SC Joint (Clavicle)
+                        if (axis === 'x') { minAngle = -45; maxAngle = 45; }   // Axial Rotation
+                        if (axis === 'y') { minAngle = -30; maxAngle = 30; }   // Protraction/Retraction
+                        if (axis === 'z') { minAngle = -10; maxAngle = 45; }   // Elevation/Depression
                       } else if (selectedBone.name.includes('UpLeg')) {
                         // Hip/Femur - AAOS clinical ROM standards
                         if (axis === 'x') { minAngle = -30; maxAngle = 45; }   // ABD 0-45°, ADD 0-30°
@@ -544,6 +835,17 @@ export function RangeOfMotionPanel({
                       const normalizedPos = ((anatomicalAngle - minAngle) / anatomicalRange) * 100;
                       const clampedPos = Math.min(100, Math.max(0, normalizedPos));
                       const neutralPos = ((0 - minAngle) / anatomicalRange) * 100;
+
+                      const applyScaleVariables = (element: HTMLDivElement | null) => {
+                        if (!element) return;
+                        element.style.setProperty('--neutral-pos', `${neutralPos}%`);
+                        element.style.setProperty('--indicator-pos', `${clampedPos}%`);
+                        element.style.setProperty('--fill-width', `${Math.abs(clampedPos - neutralPos)}%`);
+                        element.style.setProperty(
+                          '--fill-left',
+                          clampedPos < neutralPos ? `${clampedPos}%` : `${neutralPos}%`
+                        );
+                      };
                       
                       return (
                         <div key={axis} className="angle-row-scale">
@@ -552,34 +854,22 @@ export function RangeOfMotionPanel({
                             <span className="biomech-badge">{biomechValue.toFixed(1)}°</span>
                             <span className="axis-label right-label">{rightLabel}</span>
                           </div>
-                          <div className="linear-scale">
+                          <div className="linear-scale" ref={applyScaleVariables}>
                             <div className="scale-track">
                               <div className="scale-half scale-left">
                                 <span className="scale-limit">{minAngle.toFixed(0)}°</span>
                               </div>
-                              <div 
-                                className="scale-center" 
-                                style={{ '--neutral-pos': `${neutralPos}%` } as React.CSSProperties}
-                              >
+                              <div className="scale-center">
                                 <div className="neutral-marker"></div>
                               </div>
                               <div className="scale-half scale-right">
                                 <span className="scale-limit">{maxAngle.toFixed(0)}°</span>
                               </div>
                             </div>
-                            <div 
-                              className="position-indicator" 
-                              style={{ '--indicator-pos': `${clampedPos}%` } as React.CSSProperties}
-                            >
+                            <div className="position-indicator">
                               <div className="indicator-dot"></div>
                             </div>
-                            <div 
-                              className="scale-fill"
-                              style={{ 
-                                '--fill-width': `${Math.abs(clampedPos - neutralPos)}%`,
-                                '--fill-left': clampedPos < neutralPos ? `${clampedPos}%` : `${neutralPos}%`
-                              } as React.CSSProperties}
-                            ></div>
+                            <div className="scale-fill"></div>
                           </div>
                         </div>
                       );
@@ -696,33 +986,85 @@ export function RangeOfMotionPanel({
 
               <div className="manual-controls">
                 <h5>Manual Joint Probe</h5>
-                {(['x', 'y', 'z'] as const).map((axis) => (
-                  <label key={axis} className="manual-row">
-                    <span className="axis">{getBiomechMovementLabel(selectedBone.name, axis)}:</span>
-                    <input
-                      type="range"
-                      min={THREE.MathUtils.radToDeg(constraint.rotationLimits[axis][0])}
-                      max={THREE.MathUtils.radToDeg(constraint.rotationLimits[axis][1])}
-                      step={0.5}
-                      value={manualAngles[axis] ?? 0}
-                      onChange={(event) => applyManualRotation(axis, Number(event.target.value))}
-                      onPointerDown={() => setActiveAxis(axis)}
-                      onPointerUp={() => setActiveAxis(null)}
-                      onPointerLeave={() => setActiveAxis(null)}
-                    />
-                    <span className="manual-value">{(manualAngles[axis] ?? 0).toFixed(1)}°</span>
-                  </label>
-                ))}
+                {(() => {
+                  const segment = selectedBone ? getSegmentByBoneName(selectedBone.name) : null;
+                  const joint = segment ? getParentJoint(segment.id) : null;
+                  const useCoordinateControls = biomechState?.isCalibrated() && joint && jointCoordinates;
+
+                  if (useCoordinateControls && joint) {
+                    return (
+                      <>
+                        {localCoordinates && (
+                          <div className="local-override-warning">
+                            ⚠️ Local Override Active - Sliders are driving the model directly
+                          </div>
+                        )}
+                        <p className="control-mode-label">
+                            Mode: Coordinate Control ({joint.displayName})
+                        </p>
+                        {joint.coordinates.map(coord => (
+                          <label key={coord.id} className="manual-row">
+                            <span className="axis truncated" title={coord.displayName}>
+                                {coord.displayName}:
+                            </span>
+                            <input
+                              type="range"
+                              min={THREE.MathUtils.radToDeg(coord.range.min)}
+                              max={THREE.MathUtils.radToDeg(coord.range.max)}
+                              step={1}
+                              value={localCoordinates?.[coord.id] ?? jointCoordinates?.[coord.id] ?? 0}
+                              onChange={(event) => applyCoordinateChange(coord.id, Number(event.target.value))}
+                              onPointerDown={() => setActiveAxis(coord.id)}
+                              onPointerUp={() => setActiveAxis(null)}
+                              onPointerLeave={() => setActiveAxis(null)}
+                            />
+                            <span className="manual-value">{(localCoordinates?.[coord.id] ?? jointCoordinates?.[coord.id] ?? 0).toFixed(1)}°</span>
+                          </label>
+                        ))}
+                      </>
+                    );
+                  }
+
+                  return (
+                    <>
+                        <p className="control-mode-label">
+                            Mode: Bone Rotation (Euler)
+                        </p>
+                        {(['x', 'y', 'z'] as const).map((axis) => (
+                        <label key={axis} className="manual-row">
+                            <span className="axis">{getBiomechMovementLabel(selectedBone.name, axis)}:</span>
+                            <input
+                            type="range"
+                            min={THREE.MathUtils.radToDeg(constraint.rotationLimits[axis][0])}
+                            max={THREE.MathUtils.radToDeg(constraint.rotationLimits[axis][1])}
+                            step={0.5}
+                            value={manualAngles[axis] ?? 0}
+                            onChange={(event) => applyManualRotation(axis, Number(event.target.value))}
+                            onPointerDown={() => setActiveAxis(axis)}
+                            onPointerUp={() => setActiveAxis(null)}
+                            onPointerLeave={() => setActiveAxis(null)}
+                            />
+                            <span className="manual-value">{(manualAngles[axis] ?? 0).toFixed(1)}°</span>
+                        </label>
+                        ))}
+                    </>
+                  );
+                })()}
                 <button className="control-btn" onClick={handleJointReset}>
                   Reset Joint
                 </button>
               </div>
             </div>
-          ) : (
-            <div className="no-selection">
-              <p>Click on a bone to see details</p>
+            ) : (
+              <div className="no-selection">
+                <p>Click on a bone to see details</p>
+              </div>
+            )}
             </div>
-          )}
+            <div className="rom-column coordinate-column">
+              {coordinatePanel}
+            </div>
+          </div>
           
           {/* Constraint Violations */}
           {normalizedViolations.length > 0 && (

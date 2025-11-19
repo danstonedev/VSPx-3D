@@ -60,6 +60,7 @@ function Viewer3DContents({ animationOptions }: Viewer3DContentsProps) {
   const constraintViolations = useViewerSelector((s) => s.ik.constraintViolations)
   const selectedBone = useViewerSelector((s) => s.ik.selectedBone)
   const skeletonForPanel = useViewerSelector((s) => s.ik.skeleton)
+  const biomechState = useViewerSelector((s) => s.ik.biomechState)
   const ikResetCounter = useViewerSelector((s) => s.ik.resetCounter)
 
   const handleBoneSelect = useCallback(
@@ -106,6 +107,7 @@ function Viewer3DContents({ animationOptions }: Viewer3DContentsProps) {
       <RangeOfMotionPanel
         selectedBone={selectedBone}
         skeleton={skeletonForPanel}
+        biomechState={biomechState}
         constraintViolations={constraintViolations as any}
         onResetPose={ikMode ? requestIkReset : undefined}
         onToggleConstraints={

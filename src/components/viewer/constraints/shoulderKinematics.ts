@@ -29,6 +29,13 @@ export interface ShoulderKinematics {
 /**
  * Decompose shoulder rotation into elevation, plane, and axial rotation.
  * 
+ * @deprecated Use shoulderMapping.ghToClinical() + stToClinical() from Phase 2 instead.
+ * This legacy function analyzes the humerus bone only and does NOT account for 
+ * scapulothoracic (ST) joint separation. The new system correctly separates:
+ * - ST joint (thorax → scapula): tilt, rotation, upward rotation
+ * - GH joint (scapula → humerus): elevation, plane, rotation
+ * See docs/LEGACY_CODE_CLEANUP.md and docs/SHOULDER_BIOMECHANICS.md
+ * 
  * This method projects the humerus vector onto the horizontal plane to determine
  * the plane of elevation, then calculates the elevation angle from vertical.
  * 

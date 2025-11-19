@@ -2,6 +2,7 @@ import { createContext, useContext, useMemo, useReducer, type Dispatch } from 'r
 import type * as THREE from 'three'
 import type { ConstraintViolation } from '../constraints/constraintValidator'
 import type { ModelMetrics } from '../utils/modelMetrics'
+import type { BiomechState } from '../../../biomech/engine/biomechState'
 
 export type ViewerPlaybackState = {
   animationId: string
@@ -19,6 +20,7 @@ export type ViewerIKState = {
   constraintViolations: ConstraintViolation[]
   skeleton: THREE.Skeleton | null
   resetCounter: number
+  biomechState: BiomechState | null
 }
 
 export type ViewerMetricsState = {
@@ -47,6 +49,7 @@ const defaultState: ViewerState = {
     constraintViolations: [],
     skeleton: null,
     resetCounter: 0,
+    biomechState: null,
   },
   metrics: {
     modelMetrics: null,
@@ -63,6 +66,7 @@ type ViewerAction =
   | { type: 'ik/setConstraintViolations'; violations: ConstraintViolation[] }
   | { type: 'ik/setSkeleton'; skeleton: THREE.Skeleton | null }
   | { type: 'ik/requestReset' }
+  | { type: 'ik/setBiomechState'; biomechState: BiomechState | null }
   | { type: 'metrics/setModelMetrics'; metrics: ModelMetrics | null }
 
 function viewerReducer(state: ViewerState, action: ViewerAction): ViewerState {
@@ -111,6 +115,11 @@ function viewerReducer(state: ViewerState, action: ViewerAction): ViewerState {
       return {
         ...state,
         ik: { ...state.ik, resetCounter: state.ik.resetCounter + 1 },
+      }
+    case 'ik/setBiomechState':
+      return {
+        ...state,
+        ik: { ...state.ik, biomechState: action.biomechState },
       }
     case 'metrics/setModelMetrics':
       return {

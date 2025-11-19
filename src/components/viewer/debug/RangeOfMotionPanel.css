@@ -214,6 +214,107 @@
   font-size: var(--rom-font-size-md);
   line-height: 1.4;
 }
+
+/* ============================================
+   ROM Mode Toggle
+   ============================================ */
+.rom-mode-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--rom-space-md);
+  padding: var(--rom-space-md);
+  margin-bottom: var(--rom-space-lg);
+  border-radius: var(--rom-radius-md);
+  border: 1px solid var(--rom-border-tertiary);
+  background: var(--rom-bg-tertiary);
+}
+
+.rom-mode-label {
+  font-size: var(--rom-font-size-sm);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--rom-color-text-secondary);
+}
+
+.rom-mode-buttons {
+  display: flex;
+  gap: var(--rom-space-sm);
+}
+
+.rom-mode-btn {
+  border: 1px solid var(--rom-border-secondary);
+  background: transparent;
+  color: var(--rom-color-text-secondary);
+  padding: var(--rom-space-xs) var(--rom-space-md);
+  border-radius: var(--rom-radius-full);
+  font-size: var(--rom-font-size-sm);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  transition: background var(--rom-transition-fast) var(--rom-easing-standard),
+              color var(--rom-transition-fast) var(--rom-easing-standard),
+              border-color var(--rom-transition-fast) var(--rom-easing-standard);
+}
+
+.rom-mode-btn:not(:disabled):hover {
+  border-color: var(--rom-color-primary);
+  color: var(--rom-color-primary);
+}
+
+.rom-mode-btn.active {
+  background: var(--rom-surface-primary-alpha);
+  border-color: var(--rom-color-primary);
+  color: var(--rom-color-primary);
+  box-shadow: 0 0 8px rgba(0, 255, 255, 0.4);
+}
+
+.rom-mode-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* ============================================
+   Dual Column Layout
+   ============================================ */
+.rom-layout {
+  display: flex;
+  flex-direction: column;
+  gap: var(--rom-space-lg);
+}
+
+.rom-layout.rom-mode-both {
+  flex-direction: row;
+}
+
+.rom-column {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.rom-column.bone-column {
+  flex: 1.1;
+}
+
+.rom-column.coordinate-column {
+  flex: 0.9;
+}
+
+.rom-layout.rom-mode-bone .coordinate-column,
+.rom-layout.rom-mode-coordinate .bone-column {
+  display: none;
+}
+
+.rom-layout.rom-mode-bone .bone-column,
+.rom-layout.rom-mode-coordinate .coordinate-column {
+  flex: 1 1 100%;
+}
+
+@media (max-width: 1200px) {
+  .rom-layout.rom-mode-both {
+    flex-direction: column;
+  }
+}
 /* ============================================
    Bone Information
    ============================================ */
@@ -265,6 +366,296 @@
   background: var(--rom-bg-tertiary);
   border-radius: var(--rom-radius-sm);
   line-height: 1.4;
+}
+
+/* ============================================
+   Coordinate Panel & Scapulohumeral Summary
+   ============================================ */
+.coordinate-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--rom-space-md);
+}
+
+.coordinate-panel-note {
+  margin: 0;
+  padding: var(--rom-space-sm) var(--rom-space-md);
+  border-radius: var(--rom-radius-sm);
+  border: 1px dashed var(--rom-border-secondary);
+  background: var(--rom-bg-tertiary);
+  color: var(--rom-color-text-secondary);
+  font-size: var(--rom-font-size-sm);
+  line-height: 1.4;
+}
+
+.scap-summary-card {
+  border: 1px solid rgba(0, 255, 255, 0.25);
+  border-radius: var(--rom-radius-md);
+  padding: var(--rom-space-md);
+  background: linear-gradient(135deg, rgba(0, 255, 255, 0.08), rgba(0, 128, 255, 0.1));
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+}
+
+.scap-summary-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--rom-space-sm);
+}
+
+.scap-summary-header h5 {
+  margin: 0;
+  font-size: var(--rom-font-size-md);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--rom-color-secondary);
+}
+
+.scap-status {
+  padding: 2px 12px;
+  border-radius: var(--rom-radius-full);
+  font-size: var(--rom-font-size-xs);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  border: 1px solid transparent;
+}
+
+.scap-status.ok {
+  border-color: rgba(0, 255, 0, 0.4);
+  color: var(--rom-color-secondary);
+}
+
+.scap-status.warning {
+  border-color: rgba(255, 153, 0, 0.5);
+  color: var(--rom-color-warning);
+}
+
+.scap-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--rom-space-sm);
+  margin-bottom: var(--rom-space-sm);
+}
+
+.scap-summary-grid div {
+  background: var(--rom-bg-tertiary);
+  border-radius: var(--rom-radius-sm);
+  padding: var(--rom-space-sm);
+  text-align: center;
+}
+
+.scap-label {
+  display: block;
+  font-size: var(--rom-font-size-xs);
+  color: var(--rom-color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.scap-value {
+  display: block;
+  margin-top: 4px;
+  font-size: var(--rom-font-size-lg);
+  color: var(--rom-color-primary);
+}
+
+.scap-summary-note {
+  margin: 0;
+  font-size: var(--rom-font-size-sm);
+  color: var(--rom-color-text-secondary);
+  letter-spacing: 0.05em;
+}
+
+.coordinate-display-grid {
+  display: flex;
+  flex-direction: column;
+  gap: var(--rom-space-md);
+}
+
+/* ============================================
+   Coordinate Cards
+   ============================================ */
+.coordinate-card {
+  border: 1px solid var(--rom-border-tertiary);
+  border-radius: var(--rom-radius-md);
+  background: var(--rom-bg-tertiary);
+  box-shadow: 0 15px 30px rgba(0, 0, 0, 0.35);
+  overflow: hidden;
+}
+
+.coordinate-card.status-ok {
+  border-color: rgba(0, 255, 255, 0.25);
+}
+
+.coordinate-card.status-warning {
+  border-color: rgba(255, 153, 0, 0.4);
+  box-shadow: 0 0 25px rgba(255, 153, 0, 0.3);
+}
+
+.coordinate-card.status-error {
+  border-color: rgba(255, 0, 0, 0.5);
+  box-shadow: 0 0 25px rgba(255, 0, 0, 0.3);
+}
+
+.coordinate-card.status-pending {
+  border-style: dashed;
+  opacity: 0.8;
+}
+
+.coordinate-card-header {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--rom-space-md);
+  padding: var(--rom-space-md);
+  background: rgba(255, 255, 255, 0.02);
+  border: none;
+  border-bottom: 1px solid var(--rom-border-secondary);
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+  transition: background var(--rom-transition-fast) var(--rom-easing-standard);
+}
+
+.coordinate-card-header:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.coordinate-joint-id {
+  font-size: var(--rom-font-size-md);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.coordinate-joint-side {
+  margin-left: var(--rom-space-xs);
+  padding: 2px 6px;
+  border-radius: var(--rom-radius-full);
+  border: 1px solid var(--rom-border-secondary);
+  font-size: var(--rom-font-size-xs);
+  color: var(--rom-color-text-secondary);
+}
+
+.coordinate-status-chip {
+  padding: 2px 12px;
+  border-radius: var(--rom-radius-full);
+  font-size: var(--rom-font-size-xs);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  border: 1px solid var(--rom-border-secondary);
+}
+
+.coordinate-card.status-warning .coordinate-status-chip {
+  color: var(--rom-color-warning);
+  border-color: rgba(255, 153, 0, 0.4);
+}
+
+.coordinate-card.status-error .coordinate-status-chip {
+  color: var(--rom-color-error);
+  border-color: rgba(255, 0, 0, 0.4);
+}
+
+.coordinate-card.status-ok .coordinate-status-chip {
+  color: var(--rom-color-primary);
+  border-color: rgba(0, 255, 255, 0.4);
+}
+
+.coordinate-card-body {
+  padding: var(--rom-space-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--rom-space-md);
+}
+
+.coordinate-card-note {
+  margin: 0;
+  padding: var(--rom-space-sm);
+  border-radius: var(--rom-radius-sm);
+  background: var(--rom-bg-tertiary);
+  color: var(--rom-color-text-secondary);
+  font-size: var(--rom-font-size-sm);
+}
+
+.coordinate-rows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--rom-space-xs);
+}
+
+.coordinate-row {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: var(--rom-space-sm);
+  align-items: center;
+  padding: var(--rom-space-xs) var(--rom-space-sm);
+  border-radius: var(--rom-radius-sm);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.coordinate-row.severity-warning {
+  border-left: 3px solid var(--rom-color-warning);
+}
+
+.coordinate-row.severity-error {
+  border-left: 3px solid var(--rom-color-error);
+}
+
+.coordinate-row-label {
+  display: flex;
+  gap: var(--rom-space-xs);
+  align-items: center;
+  color: var(--rom-color-text-secondary);
+  font-size: var(--rom-font-size-sm);
+}
+
+.coordinate-q-label {
+  font-weight: bold;
+  color: var(--rom-color-primary);
+}
+
+.coordinate-row-value {
+  font-size: var(--rom-font-size-md);
+  color: var(--rom-color-text-primary);
+}
+
+.coordinate-row-range {
+  font-size: var(--rom-font-size-sm);
+  color: var(--rom-color-text-secondary);
+}
+
+.clinical-row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--rom-space-xs);
+}
+
+.clinical-title {
+  font-size: var(--rom-font-size-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--rom-color-text-secondary);
+}
+
+.clinical-values {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--rom-space-xs);
+}
+
+.clinical-chip {
+  border-radius: var(--rom-radius-full);
+  border: 1px solid var(--rom-border-secondary);
+  padding: 2px 8px;
+  font-size: var(--rom-font-size-xs);
+  color: var(--rom-color-text-secondary);
+  letter-spacing: 0.05em;
+}
+
+.coordinate-violations {
+  font-size: var(--rom-font-size-sm);
+  color: var(--rom-color-text-secondary);
+  letter-spacing: 0.05em;
 }
 
 /* ============================================
@@ -1123,92 +1514,35 @@
   font-family: var(--rom-font-family);
 }
 
-/* ============================================
-   Dynamic Position Classes
-   ============================================ */
-
-/* Apply dynamic positions using CSS custom properties */
-.scale-center {
-  left: var(--neutral-pos, 50%);
-}
-
-.position-indicator {
-  left: var(--indicator-pos, 50%);
-}
-
-.scale-fill {
-  width: var(--fill-width, 0%);
-  left: var(--fill-left, 50%);
-}
-
-/* ============================================
-   Accessibility Support
-   ============================================ */
-
-/* Reduced Motion Support */
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-  }
-  
-  .indicator-dot {
-    animation: none;
-  }
-  
-  .max-util .value.warning,
-  .util-value.warning {
-    animation: none;
-  }
-}
-
-/* Focus Styles for Keyboard Navigation */
-.rom-panel-header:focus-visible,
-.collapse-btn:focus-visible,
-.rom-bone-card:focus-visible {
-  outline: 2px solid var(--rom-color-primary);
-  outline-offset: 2px;
-}
-
-/* High Contrast Mode Support */
-@media (prefers-contrast: high) {
-  .rom-panel {
-    border-width: 3px;
-  }
-  
-  .indicator-dot {
-    border-width: 4px;
-  }
-  
-  .axis-label,
-  .biomech-label {
-    font-weight: 900;
-  }
-}
-
-/* Print Styles */
-@media print {
-  .rom-panel {
-    position: static;
-    max-height: none;
-    border: 2px solid #000;
-    page-break-inside: avoid;
-  }
-  
-  .collapse-btn {
-    display: none;
-  }
-  
-  .indicator-dot {
-    animation: none;
-  }
-}
 .perf-stat .value.warning {
   color: #ff9900;
   animation: pulse 1s infinite;
+}
+
+/* ============================================
+   Local Override Warning
+   ============================================ */
+.local-override-warning {
+  padding: var(--rom-space-sm);
+  margin-bottom: var(--rom-space-md);
+  background: rgba(255, 165, 0, 0.2);
+  border: 1px solid var(--rom-color-warning);
+  border-radius: var(--rom-radius-sm);
+  font-size: var(--rom-font-size-sm);
+  color: #ffcc00;
+}
+
+.control-mode-label {
+  font-size: 0.8em;
+  opacity: 0.7;
+  margin-bottom: var(--rom-space-sm);
+}
+
+.manual-row .axis.truncated {
+  width: 140px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* Responsive adjustments */

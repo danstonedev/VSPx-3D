@@ -20,8 +20,10 @@ import {
 } from './utils/ikSolverConfig';
 import { captureConstraintReferencePose, clearConstraintReferencePose, validateRotation, type ConstraintViolation } from './constraints/constraintValidator';
 import { captureNeutralPoseFromSkeleton } from './constraints/neutralPoseLoader';
-import { useViewerSelector } from './state/viewerState';
+import { useViewerDispatch, useViewerSelector } from './state/viewerState';
 import { captureJointNeutralPose, clearJointNeutralPose } from './biomech/jointAngles';
+import { BiomechState } from '../../biomech/engine/biomechState';
+import { useCoordinateEngine } from './utils/debugFlags';
 import { hasConstraint } from './constraints/jointConstraints';
 import { getConstraintForBone } from './constraints/jointConstraints';
 import { capturePoseSnapshot, diffPoseSnapshots, formatPoseDeltas, type PoseSnapshot } from './utils/skeletonDiagnostics';
@@ -29,7 +31,7 @@ import './InteractiveBoneController.css'
 
 // Global feature flag to table IK end-to-end without removing code paths
 // When false, no IK targets or solvers are created and the skeleton remains unchanged
-const IK_FEATURE_ENABLED = false;
+const IK_FEATURE_ENABLED = true;
 
 export interface InteractiveBoneControllerProps {
   skinnedMesh: THREE.SkinnedMesh;
@@ -96,9 +98,45 @@ export default function InteractiveBoneController({
   
   const { camera, raycaster, gl } = useThree();
   const animationId = useViewerSelector(state => state.playback.animationId);
+  const biomechState = useViewerSelector(state => state.ik.biomechState); // Get biomechState from store
+  const dispatch = useViewerDispatch();
   const [ikSolver, setIkSolver] = useState<RotationCompensatedIKSolver | null>(null);
   const [ikHelper, setIkHelper] = useState<CCDIKHelper | null>(null);
   const [ikTargets, setIkTargets] = useState<Map<string, THREE.Bone>>(new Map());
+  
+  // Phase 2: Coordinate engine state (only created if feature flag enabled)
+  const biomechStateRef = useRef<BiomechState | null>(null);
+  const coordinateEngineEnabled = useCoordinateEngine();
+  
+  // Debug: Log feature flag status on mount
+  useEffect(() => {
+    console.log(`🧬 Coordinate engine ${coordinateEngineEnabled ? 'ENABLED' : 'DISABLED'}`);
+  }, [coordinateEngineEnabled]);
+
+  // Keep viewer state in sync with coordinate engine lifecycle
+  useEffect(() => {
+    if (coordinateEngineEnabled) return;
+    biomechStateRef.current?.reset();
+    biomechStateRef.current = null;
+    dispatch({ type: 'ik/setBiomechState', biomechState: null });
+  }, [coordinateEngineEnabled, dispatch]);
+
+  useEffect(() => {
+    if (skeleton) return;
+    biomechStateRef.current?.reset();
+    biomechStateRef.current = null;
+    dispatch({ type: 'ik/setBiomechState', biomechState: null });
+  }, [skeleton, dispatch]);
+
+  // Cleanup on unmount (or when controller is removed)
+  useEffect(() => {
+    return () => {
+      biomechStateRef.current?.reset();
+      biomechStateRef.current = null;
+      dispatch({ type: 'ik/setBiomechState', biomechState: null });
+    };
+  }, [dispatch]);
+  
   const [isReady, setIsReady] = useState(false);
   const [isShiftHeld, setIsShiftHeld] = useState(false);
   const bindPoseRef = useRef<Map<string, { position: THREE.Vector3; quaternion: THREE.Quaternion; scale: THREE.Vector3 }>>(new Map());
@@ -225,6 +263,32 @@ ${formatPoseDeltas(deltas)}`);
     captureJointNeutralPose(skeleton);
     console.log('✅ Biomech neutral pose captured for teaching angles');
     
+    // Phase 2: Initialize coordinate engine if enabled
+    if (coordinateEngineEnabled && !biomechStateRef.current) {
+      console.log('🚀 Phase 2: Initializing coordinate engine...');
+      biomechStateRef.current = new BiomechState();
+      const initResult = biomechStateRef.current.initialize(skeleton);
+      
+      if (initResult.success) {
+        console.log(`✅ BiomechState initialized: ${initResult.jointsInitialized} joints, ${initResult.segmentCount} segments`);
+        dispatch({ type: 'ik/setBiomechState', biomechState: biomechStateRef.current });
+        
+        // Calibrate neutral pose if this is Neutral.glb animation
+        if (animationId && animationId.toLowerCase().includes('neutral')) {
+          const calibResult = biomechStateRef.current.calibrateNeutral(animationId);
+          if (calibResult.success) {
+            console.log(`✅ Neutral pose calibrated: ${calibResult.jointsCalibratedCount} joints`);
+          } else {
+            console.warn('⚠️ Neutral pose calibration failed');
+          }
+        }
+      } else {
+        console.error('❌ BiomechState initialization failed:', initResult.errors);
+        console.error('   Missing segments:', initResult.missingSegments);
+        dispatch({ type: 'ik/setBiomechState', biomechState: null });
+      }
+    }
+    
     // DIAGNOSTIC: Check actual T-pose rotations for key joints to verify axis conventions
     console.log('🔍 T-POSE EULER ANGLES (for axis convention verification):');
     
@@ -254,7 +318,7 @@ ${formatPoseDeltas(deltas)}`);
       clearConstraintReferencePose();
       clearJointNeutralPose();
     };
-  }, [skeleton]);
+  }, [skeleton, coordinateEngineEnabled, animationId, dispatch]);
 
   // IK system initialization (only in IK mode when enabled=true)
   useEffect(() => {
@@ -339,7 +403,7 @@ ${formatPoseDeltas(deltas)}`);
       }
 
       // Build IK configuration AFTER capturing rest pose
-      const { iks, targets } = buildIKConfiguration(skeleton, skeletonRoot);
+      const { iks, targets } = buildIKConfiguration(skeleton, skeletonRoot, biomechState);
       
       if (iks.length === 0) {
         console.warn('No valid IK chains created');
@@ -385,7 +449,7 @@ ${formatPoseDeltas(deltas)}`);
       }
       // Note: bindPoseRef and constraint reference are cleaned up by the always-run effect
     };
-  }, [skeleton, skeletonRoot, skinnedMesh, enabled, showDebugInfo, captureBindPose]);
+  }, [skeleton, skeletonRoot, skinnedMesh, enabled, showDebugInfo, captureBindPose, biomechState]); // Add biomechState dependency
 
   // Remove IK helper when switching back to playback mode
   useEffect(() => {
@@ -869,6 +933,21 @@ ${formatPoseDeltas(deltas)}`);
     if (!ikSolver || !enabled) return;
     if (!dragStateRef.current.isDragging) {
       syncIKTargetsToEffectors();
+    }
+  });
+  
+  // Phase 2: Update coordinate engine every frame
+  useFrame((_, delta) => {
+    if (!coordinateEngineEnabled || !biomechStateRef.current) return;
+    if (!biomechStateRef.current.isCalibrated()) return;
+    
+    const updateResult = biomechStateRef.current.update(delta);
+    
+    // Log violations only if verbose debugging enabled
+    if (showDebugInfo && updateResult.violations.length > 0) {
+      console.log(`⚠️ Coordinate ROM violations (${updateResult.violations.length}):`, 
+        updateResult.violations.slice(0, 3) // Only log first 3
+      );
     }
   });
   

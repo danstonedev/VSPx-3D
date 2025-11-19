@@ -30,6 +30,7 @@ export type BiomechJointId =
   | 'knee'
   | 'ankle'
   | 'shoulder'
+  | 'sc'
   | 'elbow';
 
 /**
@@ -106,14 +107,14 @@ export const JOINT_CONFIGS: JointConfig[] = [
     side: 'left',
     proximalBoneName: 'mixamorig1Hips',
     distalBoneName: 'mixamorig1LeftUpLeg',
-    eulerOrder: 'XYZ',
+    eulerOrder: 'XZY',
   },
   {
     id: 'hip',
     side: 'right',
     proximalBoneName: 'mixamorig1Hips',
     distalBoneName: 'mixamorig1RightUpLeg',
-    eulerOrder: 'XYZ',
+    eulerOrder: 'XZY',
   },
 
   // ==================== KNEES ====================
@@ -126,14 +127,14 @@ export const JOINT_CONFIGS: JointConfig[] = [
     side: 'left',
     proximalBoneName: 'mixamorig1LeftUpLeg',
     distalBoneName: 'mixamorig1LeftLeg',
-    eulerOrder: 'XYZ',
+    eulerOrder: 'XZY',
   },
   {
     id: 'knee',
     side: 'right',
     proximalBoneName: 'mixamorig1RightUpLeg',
     distalBoneName: 'mixamorig1RightLeg',
-    eulerOrder: 'XYZ',
+    eulerOrder: 'XZY',
   },
 
   // ==================== ANKLES ====================
@@ -156,8 +157,26 @@ export const JOINT_CONFIGS: JointConfig[] = [
     eulerOrder: 'XYZ',
   },
 
-  // ==================== SHOULDERS ====================
-  // Shoulder (glenohumeral): scap/torso segment → humerus
+  // ==================== SHOULDERS (SC + GH) ====================
+  
+  // Sternoclavicular (SC): thorax → clavicle/scapula
+  // Controls the entire shoulder girdle motion
+  {
+    id: 'sc',
+    side: 'left',
+    proximalBoneName: 'mixamorig1Spine2',
+    distalBoneName: 'mixamorig1LeftShoulder',
+    eulerOrder: 'XYZ', // Standard order for clavicle
+  },
+  {
+    id: 'sc',
+    side: 'right',
+    proximalBoneName: 'mixamorig1Spine2',
+    distalBoneName: 'mixamorig1RightShoulder',
+    eulerOrder: 'XYZ', // Standard order for clavicle
+  },
+
+  // Glenohumeral (GH): scapula → humerus
   // Clinical ROM:
   // - Flexion: ~180°, Extension: ~60°
   // - Abduction: ~180°, Adduction: ~30-40° across midline
@@ -165,17 +184,17 @@ export const JOINT_CONFIGS: JointConfig[] = [
   {
     id: 'shoulder',
     side: 'left',
-    proximalBoneName: 'mixamorig1Spine2',      // or mixamorig1LeftShoulder if preferred
+    proximalBoneName: 'mixamorig1LeftShoulder', // Updated to use Scapula/Clavicle as parent
     distalBoneName: 'mixamorig1LeftArm',
-    eulerOrder: 'XYZ',
+    eulerOrder: 'ZXY',
     // No tPoseOffset needed - axis mapping handles it correctly
   },
   {
     id: 'shoulder',
     side: 'right',
-    proximalBoneName: 'mixamorig1Spine2',
+    proximalBoneName: 'mixamorig1RightShoulder', // Updated to use Scapula/Clavicle as parent
     distalBoneName: 'mixamorig1RightArm',
-    eulerOrder: 'XYZ',
+    eulerOrder: 'ZXY',
     // No tPoseOffset needed - axis mapping handles it correctly
   },
 
@@ -189,14 +208,14 @@ export const JOINT_CONFIGS: JointConfig[] = [
     side: 'left',
     proximalBoneName: 'mixamorig1LeftArm',
     distalBoneName: 'mixamorig1LeftForeArm',
-    eulerOrder: 'XYZ',
+    eulerOrder: 'ZXY',
   },
   {
     id: 'elbow',
     side: 'right',
     proximalBoneName: 'mixamorig1RightArm',
     distalBoneName: 'mixamorig1RightForeArm',
-    eulerOrder: 'XYZ',
+    eulerOrder: 'ZXY',
   },
 ];
 
@@ -381,9 +400,14 @@ export function mapEulerToBiomech(
   // For shoulders, X-axis represents abduction/adduction in this rig
   // BUT: need to negate axes to match clinical convention
   if (jointId === 'shoulder') {
-    flexExt = -deg(euler.y);   // Y = flexion/extension (NEGATED: forward raise = positive flexion)
-    abdAdd = -deg(euler.x);    // X = abduction/adduction (NEGATED: lateral raise = positive abduction)
-    rotation = deg(euler.z);   // Z = rotation
+    flexExt = deg(euler.y);    // Y = flexion/extension (Index 1 in ZXY)
+    abdAdd = -deg(euler.z);    // Z = abduction/adduction (Index 2 in ZXY) - Negated for clinical sign
+    rotation = deg(euler.x);   // X = rotation (Index 0 in ZXY)
+  } else if (jointId === 'elbow') {
+    // ELBOW: Flexion is Z-axis (per corrected joints.ts config)
+    flexExt = deg(euler.z);    // Z = flexion/extension
+    abdAdd = deg(euler.x);     // X = varus/valgus (carrying angle)
+    rotation = deg(euler.y);   // Y = pronation/supination
   }
 
   // Apply T-pose offset correction to convert from T-pose to anatomical neutral
@@ -444,8 +468,12 @@ export function computeBiomechAnglesForConfig(
   const qNeutral = jointNeutralRelativeQuat.get(key);
   
   if (!qNeutral) {
-    console.warn(`⚠️ No neutral pose captured for ${cfg.id} ${cfg.side}. Call captureJointNeutralPose() first.`);
-    return null;
+    // Fallback: if no neutral pose captured, assume current pose is neutral (0°)
+    // This prevents crashes when UI updates before capture is complete
+    // console.warn(`⚠️ No neutral pose captured for ${cfg.id} ${cfg.side}. Call captureJointNeutralPose() first.`);
+    const currentRel = computeJointRelativeQuaternion(proximal, distal);
+    jointNeutralRelativeQuat.set(key, currentRel);
+    return mapEulerToBiomech(cfg.id, cfg.side, new THREE.Euler(0, 0, 0, cfg.eulerOrder), cfg.tPoseOffset);
   }
   
   const qDelta = qNeutral.clone().invert().multiply(qRel);

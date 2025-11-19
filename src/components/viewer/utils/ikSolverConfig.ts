@@ -6,6 +6,9 @@
  */
 
 import * as THREE from 'three';
+import type { BiomechState } from '../../../biomech/engine/biomechState';
+import { getSegmentByBoneName } from '../../../biomech/model/segments';
+import { getParentJoint } from '../../../biomech/model/joints';
 
 /**
  * IK chain definition for CCDIKSolver
@@ -25,6 +28,8 @@ export interface IKChainConfig {
  */
 export const IK_CHAIN_CONFIGS: IKChainConfig[] = [
   // ==================== ARMS ====================
+  // DISABLED: Biomech engine should drive arms directly to avoid IK conflict
+  /*
   {
     name: 'Left Arm',
     targetBoneName: 'IKTarget_LeftHand',
@@ -51,6 +56,7 @@ export const IK_CHAIN_CONFIGS: IKChainConfig[] = [
     minAngle: 0.01,
     maxAngle: 0.5
   },
+  */
   
   // ==================== LEGS ====================
   {
@@ -151,7 +157,8 @@ export function getBoneIndex(skeleton: THREE.Skeleton, boneName: string): number
  */
 export function createIKDefinition(
   config: IKChainConfig,
-  skeleton: THREE.Skeleton
+  skeleton: THREE.Skeleton,
+  biomechState?: BiomechState | null
 ): any | null {
   const targetIndex = getBoneIndex(skeleton, config.targetBoneName);
   const effectorIndex = getBoneIndex(skeleton, config.effectorBoneName);
@@ -173,34 +180,46 @@ export function createIKDefinition(
       return null;
     }
     
-    // CONSTRAINTS DISABLED: Don't fetch constraint data
-    // const constraint = getConstraintForBone(boneName);
-    
     // Basic link definition
     const link: any = {
       index,
       enabled: true
     };
     
-    // CONSTRAINTS DISABLED: Don't apply rotationMin/rotationMax to allow full range of motion
-    // The three.js CCDIKSolver will clamp rotations if these are set, preventing natural movement
-    // if (constraint && constraint.enabled) {
-    //   const limits = constraint.rotationLimits;
-    //   
-    //   link.rotationMin = new THREE.Vector3(
-    //     limits.x[0],
-    //     limits.y[0],
-    //     limits.z[0]
-    //   );
-    //   
-    //   link.rotationMax = new THREE.Vector3(
-    //     limits.x[1],
-    //     limits.y[1],
-    //     limits.z[1]
-    //   );
-    // }
-    
-    console.log(`🔓 Constraint limits DISABLED for ${boneName} - full range of motion allowed`);
+    // Apply constraints from BiomechState if available
+    if (biomechState && biomechState.isCalibrated()) {
+        const segment = getSegmentByBoneName(boneName);
+        const joint = segment ? getParentJoint(segment.id) : null;
+        const qNeutral = joint ? biomechState.getNeutralQuaternion(joint.id) : null;
+
+        if (joint && qNeutral) {
+            const neutralEuler = new THREE.Euler().setFromQuaternion(qNeutral, joint.eulerOrder);
+            
+            const min = new THREE.Vector3(-Math.PI, -Math.PI, -Math.PI);
+            const max = new THREE.Vector3(Math.PI, Math.PI, Math.PI);
+            
+            joint.coordinates.forEach(coord => {
+                if (coord.clamped) {
+                    const neutralVal = (coord.index === 0) ? neutralEuler.x :
+                                     (coord.index === 1) ? neutralEuler.y :
+                                     neutralEuler.z;
+                    
+                    const absMin = neutralVal + coord.range.min;
+                    const absMax = neutralVal + coord.range.max;
+                    
+                    if (coord.index === 0) { min.x = absMin; max.x = absMax; }
+                    if (coord.index === 1) { min.y = absMin; max.y = absMax; }
+                    if (coord.index === 2) { min.z = absMin; max.z = absMax; }
+                }
+            });
+            
+            link.rotationMin = min;
+            link.rotationMax = max;
+            // console.log(`🔒 Applied biomech limits for ${boneName}`);
+        }
+    } else {
+        // console.log(`🔓 Constraint limits DISABLED for ${boneName} - full range of motion allowed`);
+    }
     
     return link;
   }).filter((link) => link !== null); // Remove null entries
@@ -286,7 +305,8 @@ export function initializeIKTargets(
  */
 export function buildIKConfiguration(
   skeleton: THREE.Skeleton,
-  root: THREE.Object3D
+  root: THREE.Object3D,
+  biomechState?: BiomechState | null
 ): {
   iks: any[];
   targets: Map<string, THREE.Bone>;
@@ -295,7 +315,7 @@ export function buildIKConfiguration(
   const targets = initializeIKTargets(skeleton, root);
   
   // Build IK definitions
-  const iks = IK_CHAIN_CONFIGS.map((config) => createIKDefinition(config, skeleton))
+  const iks = IK_CHAIN_CONFIGS.map((config) => createIKDefinition(config, skeleton, biomechState))
     .filter((ik) => ik !== null); // Remove failed chains
   
   console.log(`IK Configuration: ${iks.length} chains created from ${IK_CHAIN_CONFIGS.length} configs`);
