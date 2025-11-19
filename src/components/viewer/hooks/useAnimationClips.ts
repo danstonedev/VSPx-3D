@@ -37,7 +37,64 @@ export function useAnimationClips(): LoadedAnimations {
   const srcClips: THREE.AnimationClip[] = (gltf?.animations ?? []) as any
       
       if (!srcClips.length) {
-        animationWarn('No animation clips found', { animationId: spec.id })
+        // Handle static pose files by creating a minimal animation clip from the skeleton pose
+        animationWarn('No animation clips found, attempting to create static pose clip', { animationId: spec.id })
+        
+        // Find the skeleton in the loaded GLTF
+        let skeleton: THREE.Skeleton | null = null
+        gltf.scene.traverse((child: any) => {
+          if (child.isSkinnedMesh && child.skeleton) {
+            skeleton = child.skeleton
+          }
+        })
+        
+        if (skeleton) {
+          // Create animation tracks from the current bone poses
+          const tracks: THREE.KeyframeTrack[] = []
+          const bones = (skeleton as THREE.Skeleton).bones
+          bones.forEach((bone: THREE.Bone) => {
+            // Create position track (2 identical keyframes for static pose)
+            const posTrack = new THREE.VectorKeyframeTrack(
+              `${bone.name}.position`,
+              [0, 0.1], // times: frame 0 and 0.1 seconds
+              [
+                bone.position.x, bone.position.y, bone.position.z,
+                bone.position.x, bone.position.y, bone.position.z
+              ]
+            )
+            tracks.push(posTrack)
+            
+            // Create rotation track
+            const rotTrack = new THREE.QuaternionKeyframeTrack(
+              `${bone.name}.quaternion`,
+              [0, 0.1],
+              [
+                bone.quaternion.x, bone.quaternion.y, bone.quaternion.z, bone.quaternion.w,
+                bone.quaternion.x, bone.quaternion.y, bone.quaternion.z, bone.quaternion.w
+              ]
+            )
+            tracks.push(rotTrack)
+            
+            // Create scale track
+            const scaleTrack = new THREE.VectorKeyframeTrack(
+              `${bone.name}.scale`,
+              [0, 0.1],
+              [
+                bone.scale.x, bone.scale.y, bone.scale.z,
+                bone.scale.x, bone.scale.y, bone.scale.z
+              ]
+            )
+            tracks.push(scaleTrack)
+          })
+          
+          if (tracks.length > 0) {
+            const staticClip = new THREE.AnimationClip(spec.id, 0.1, tracks)
+            out.push(staticClip)
+            continue
+          }
+        }
+        
+        animationWarn('Could not create static pose clip, no skeleton found', { animationId: spec.id })
         continue
       }
       

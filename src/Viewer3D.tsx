@@ -2,6 +2,7 @@ import { Canvas } from '@react-three/fiber'
 import { Suspense, useCallback, useEffect, useMemo } from 'react'
 import type * as THREE from 'three'
 import type { ConstraintViolation } from './components/viewer/constraints/constraintValidator'
+import { initializeNeutralPoseReference } from './components/viewer/constraints/constraintValidator'
 import {
   ANIMATIONS,
   DEFAULT_ANIMATION_ID,
@@ -26,6 +27,13 @@ function Viewer3D({ initialAnimation = DEFAULT_ANIMATION_ID }: Viewer3DProps) {
   const initialId = animationOptions.includes(initialAnimation)
     ? initialAnimation
     : DEFAULT_ANIMATION_ID
+
+  // Initialize Neutral Position as reference for all joint angle measurements
+  useEffect(() => {
+    initializeNeutralPoseReference().catch(err => {
+      console.error('Failed to initialize Neutral Position reference:', err);
+    });
+  }, []);
 
   return (
     <ViewerStateProvider

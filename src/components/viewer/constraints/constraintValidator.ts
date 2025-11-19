@@ -8,6 +8,7 @@
 import * as THREE from 'three';
 import { getConstraintForBone, RotationLimits, JointConstraint, hasConstraint } from './jointConstraints';
 import { relativeToAnatomical } from './angleConversion';
+import { getNeutralPoseRotation, loadNeutralPose } from './neutralPoseLoader';
 
 export type ConstraintViolation = {
   boneName: string;
@@ -15,9 +16,26 @@ export type ConstraintViolation = {
   violations: string[];
 };
 
+// Legacy T-pose capture (deprecated - use Neutral Position instead)
 const constraintReferencePose = new Map<string, THREE.Quaternion>();
+let useNeutralPoseReference = false;
 
+/**
+ * Initialize constraint system to use Neutral Position as reference
+ * This should be called once at app startup
+ */
+export async function initializeNeutralPoseReference(): Promise<void> {
+  await loadNeutralPose();
+  useNeutralPoseReference = true;
+  console.log('✅ Constraint system initialized with Neutral Position reference');
+}
+
+/**
+ * @deprecated Use initializeNeutralPoseReference() instead
+ * Legacy function for T-pose capture - kept for backward compatibility
+ */
 export function captureConstraintReferencePose(skeleton: THREE.Skeleton): void {
+  console.warn('⚠️ captureConstraintReferencePose() is deprecated. Use initializeNeutralPoseReference() instead.');
   constraintReferencePose.clear();
   for (const bone of skeleton.bones) {
     if (!hasConstraint(bone.name)) continue;
@@ -27,12 +45,23 @@ export function captureConstraintReferencePose(skeleton: THREE.Skeleton): void {
 
 export function clearConstraintReferencePose(): void {
   constraintReferencePose.clear();
+  useNeutralPoseReference = false;
 }
 
 function getRestQuaternion(bone: THREE.Bone): THREE.Quaternion {
+  // Try Neutral Position reference first
+  if (useNeutralPoseReference) {
+    const neutralQuat = getNeutralPoseRotation(bone.name);
+    if (neutralQuat) {
+      return neutralQuat;
+    }
+    console.warn(`⚠️ No Neutral Position data for ${bone.name}, falling back to captured pose`);
+  }
+  
+  // Fall back to legacy captured pose
   const cached = constraintReferencePose.get(bone.name);
   if (!cached) {
-    throw new Error(`❌ No constraint reference pose for ${bone.name}. Must call captureConstraintReferencePose() with skeleton in T-pose first!`);
+    throw new Error(`❌ No constraint reference pose for ${bone.name}. Call initializeNeutralPoseReference() or captureConstraintReferencePose() first!`);
   }
   return cached;
 }
@@ -41,15 +70,17 @@ export function getRelativeEuler(bone: THREE.Bone): THREE.Euler {
   const restQuat = getRestQuaternion(bone);
   const restInverse = restQuat.clone().invert();
   // Calculate relative rotation: restInverse * current
+  // Relative rotation represents movement FROM Neutral Position (anatomical zero)
   // IMPORTANT: multiplyQuaternions creates new result, multiply() modifies in-place
   const relativeQuat = new THREE.Quaternion().multiplyQuaternions(restInverse, bone.quaternion);
   return new THREE.Euler().setFromQuaternion(relativeQuat, 'XYZ');
 }
 
 /**
- * Get anatomical angles (relative to true anatomical neutral, not T-pose)
+ * Get anatomical angles (relative to true anatomical neutral)
  * 
  * Uses the angleConversion module for clear, testable coordinate transformation.
+ * Now references Neutral Position (Neutral.glb) as the anatomical zero point.
  * 
  * @param bone - The bone to measure
  * @returns Euler angles in anatomical reference frame (in radians)
@@ -62,7 +93,7 @@ export function getAnatomicalEuler(bone: THREE.Bone): THREE.Euler {
   const tPoseOffset = constraint?.tPoseOffset || constraint?.anatomicalNeutral;
   
   if (!constraint || !tPoseOffset) {
-    // No T-pose offset defined = T-pose IS anatomical neutral
+    // No T-pose offset defined = Neutral Position IS anatomical neutral
     // Return relative angles directly as anatomical angles
     return relativeEuler;
   }

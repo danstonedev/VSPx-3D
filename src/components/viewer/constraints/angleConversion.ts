@@ -4,19 +4,21 @@
  * Provides clear, testable conversion between different angle reference frames.
  * 
  * REFERENCE FRAMES:
- * 1. T-Pose Space: Model's bind pose (arms abducted ~57°, legs rotated)
- * 2. Relative Space: Rotation FROM T-pose (0° = at T-pose)
- * 3. Anatomical Space: Clinical reference (0° = arms at sides, legs vertical)
+ * 1. Neutral Position Space: Anatomical reference pose from Neutral.glb (arms at sides, legs vertical)
+ * 2. Relative Space: Rotation FROM Neutral Position (0° = at Neutral Position)
+ * 3. Anatomical Space: Clinical reference (same as Neutral Position - 0° = anatomical neutral)
  * 
  * TERMINOLOGY:
- * - tPoseOffset: How far T-pose is FROM anatomical neutral
- *   Example: Shoulder X-axis has tPoseOffset = 57° (T-pose is 57° abducted)
+ * - neutralOffset: For legacy bones that may have offsets from true anatomical neutral
+ *   (This replaces the old tPoseOffset concept)
  * 
- * - relativeAngle: Current rotation FROM T-pose
- *   Example: Arms at sides = -57° (moved 57° from T-pose toward neutral)
+ * - relativeAngle: Current rotation FROM Neutral Position
+ *   Example: Shoulder abduction = +90° means raised 90° from neutral (arms at sides)
  * 
  * - anatomicalAngle: Angle in clinical reference frame
- *   Example: Arms at sides = 0°, T-pose = 57°, overhead = 117°
+ *   Example: Arms at sides = 0°, arms raised = 90°, arms overhead = 180°
+ * 
+ * NOTE: With Neutral Position as reference, relativeAngle === anatomicalAngle for most joints.
  */
 
 import * as THREE from 'three';
