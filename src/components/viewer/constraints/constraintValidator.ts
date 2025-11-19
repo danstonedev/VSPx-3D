@@ -25,9 +25,15 @@ let useNeutralPoseReference = false;
  * This should be called once at app startup
  */
 export async function initializeNeutralPoseReference(): Promise<void> {
-  await loadNeutralPose();
-  useNeutralPoseReference = true;
-  console.log('✅ Constraint system initialized with Neutral Position reference');
+  try {
+    await loadNeutralPose();
+    useNeutralPoseReference = true;
+    console.log('✅ Constraint system initialized with Neutral Position reference');
+  } catch (error) {
+    console.warn('⚠️ Could not load Neutral.glb for reference. Will use captured pose from first animation load.');
+    // Fall back to legacy capture mode
+    useNeutralPoseReference = false;
+  }
 }
 
 /**
@@ -71,6 +77,7 @@ export function getRelativeEuler(bone: THREE.Bone): THREE.Euler {
   const restInverse = restQuat.clone().invert();
   // Calculate relative rotation: restInverse * current
   // Relative rotation represents movement FROM Neutral Position (anatomical zero)
+  // When bone is in Neutral Position: restInverse * neutral = identity = (0,0,0)
   // IMPORTANT: multiplyQuaternions creates new result, multiply() modifies in-place
   const relativeQuat = new THREE.Quaternion().multiplyQuaternions(restInverse, bone.quaternion);
   return new THREE.Euler().setFromQuaternion(relativeQuat, 'XYZ');

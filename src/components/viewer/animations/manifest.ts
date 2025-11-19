@@ -43,7 +43,7 @@ export const ANIMATIONS: AnimationSpec[] = (filesJson?.files ?? []).map((id: str
   ...(OVERRIDES[id] || {}),
 }))
 
-export const DEFAULT_ANIMATION_ID = 'Stand.glb'
+export const DEFAULT_ANIMATION_ID = 'Neutral.glb'
 
 /**
  * Format animation ID for display in UI

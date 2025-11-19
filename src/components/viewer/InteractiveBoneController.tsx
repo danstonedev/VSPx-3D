@@ -19,6 +19,8 @@ import {
   type IKChainConfig 
 } from './utils/ikSolverConfig';
 import { captureConstraintReferencePose, clearConstraintReferencePose, validateRotation, type ConstraintViolation } from './constraints/constraintValidator';
+import { captureNeutralPoseFromSkeleton } from './constraints/neutralPoseLoader';
+import { useViewerSelector } from './state/viewerState';
 import { captureJointNeutralPose, clearJointNeutralPose } from './biomech/jointAngles';
 import { hasConstraint } from './constraints/jointConstraints';
 import { getConstraintForBone } from './constraints/jointConstraints';
@@ -93,6 +95,7 @@ export default function InteractiveBoneController({
 }: InteractiveBoneControllerProps) {
   
   const { camera, raycaster, gl } = useThree();
+  const animationId = useViewerSelector(state => state.playback.animationId);
   const [ikSolver, setIkSolver] = useState<RotationCompensatedIKSolver | null>(null);
   const [ikHelper, setIkHelper] = useState<CCDIKHelper | null>(null);
   const [ikTargets, setIkTargets] = useState<Map<string, THREE.Bone>>(new Map());
@@ -210,7 +213,14 @@ ${formatPoseDeltas(deltas)}`);
     captureConstraintReferencePose(skeleton);
     console.log(`✅ Constraint reference locked (${skeleton.bones.filter(b => hasConstraint(b.name)).length} bones)`);
     
+    // ALSO capture as Neutral Position reference if not already loaded
+    // This allows us to use the first animation's skeleton as neutral reference
+    const captured = captureNeutralPoseFromSkeleton(skeleton, animationId);
+    
     // Capture biomech neutral pose for teaching-oriented joint angles
+    if (captured) {
+      console.log('🔬 Captured Neutral Position from skeleton (fallback mode)');
+    }
     console.log('🔬 Capturing biomech neutral pose for joint coordinate systems...');
     captureJointNeutralPose(skeleton);
     console.log('✅ Biomech neutral pose captured for teaching angles');

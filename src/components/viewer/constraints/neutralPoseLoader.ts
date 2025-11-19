@@ -50,8 +50,16 @@ export async function loadNeutralPose(): Promise<Map<string, THREE.Quaternion>> 
       (gltf) => {
         const poseData = new Map<string, THREE.Quaternion>();
         
-        // Find skeleton in the loaded GLTF
+        // Find skeleton in the loaded GLTF - check both direct skeleton and in scene
         let skeleton: THREE.Skeleton | null = null;
+        
+        // First, check if there's animation data and extract the first frame
+        if (gltf.animations && gltf.animations.length > 0) {
+          console.log(`📊 Neutral.glb has ${gltf.animations.length} animation(s), using animation data`);
+          // Will extract from scene skeleton below
+        }
+        
+        // Search for skeleton in the scene
         gltf.scene.traverse((child: any) => {
           if (child.isSkinnedMesh && child.skeleton) {
             skeleton = child.skeleton;
@@ -59,8 +67,22 @@ export async function loadNeutralPose(): Promise<Map<string, THREE.Quaternion>> 
         });
         
         if (!skeleton) {
-          reject(new Error('No skeleton found in Neutral.glb'));
-          return;
+          console.warn('⚠️ No skeleton found in Neutral.glb loaded scene');
+          // Try to find bones directly in scene
+          const bones: THREE.Bone[] = [];
+          gltf.scene.traverse((child: any) => {
+            if (child.isBone) {
+              bones.push(child);
+            }
+          });
+          
+          if (bones.length === 0) {
+            reject(new Error('No skeleton found in Neutral.glb - file may not contain armature data'));
+            return;
+          }
+          
+          console.log(`⚠️ Found ${bones.length} bones directly, creating skeleton...`);
+          skeleton = new THREE.Skeleton(bones);
         }
         
         // Store each bone's rotation in neutral pose
@@ -69,6 +91,17 @@ export async function loadNeutralPose(): Promise<Map<string, THREE.Quaternion>> 
         });
         
         console.log(`✅ Loaded Neutral Position reference (${poseData.size} bones)`);
+        
+        // Diagnostic: Log key joint rotations in neutral pose
+        const diagnosticBones = ['mixamorig1LeftArm', 'mixamorig1RightArm', 'mixamorig1LeftForeArm', 'mixamorig1RightForeArm'];
+        console.log('🔍 NEUTRAL POSE ROTATIONS (should be anatomical zero):');
+        diagnosticBones.forEach(boneName => {
+          const quat = poseData.get(boneName);
+          if (quat) {
+            const euler = new THREE.Euler().setFromQuaternion(quat, 'XYZ');
+            console.log(`  ${boneName}: x=${THREE.MathUtils.radToDeg(euler.x).toFixed(1)}° y=${THREE.MathUtils.radToDeg(euler.y).toFixed(1)}° z=${THREE.MathUtils.radToDeg(euler.z).toFixed(1)}°`);
+          }
+        });
         
         // Cache the result
         neutralPoseCache = poseData;
@@ -159,6 +192,70 @@ export function resetToNeutralPose(bone: THREE.Bone): boolean {
   bone.updateMatrixWorld(true);
   
   return true;
+}
+
+/**
+ * Capture neutral pose from current skeleton state
+ * Use this when Neutral.glb file doesn't contain skeleton data
+ * 
+ * @param skeleton - The skeleton in neutral pose
+ * @param animationName - Name of current animation (if "Neutral Position", always capture)
+ * @returns true if capture was performed, false if skipped
+ */
+export function captureNeutralPoseFromSkeleton(skeleton: THREE.Skeleton, animationName?: string): boolean {
+  // If this IS the Neutral Position animation, always capture (replace file data)
+  const isNeutralAnimation = animationName?.toLowerCase().includes('neutral');
+  
+  // Don't overwrite if already loaded from file UNLESS this is Neutral Position animation
+  if (neutralPoseCache && neutralPoseCache.size > 0 && !isNeutralAnimation) {
+    console.log('⏭️ Skipping skeleton capture - Neutral Position already loaded from file');
+    return false;
+  }
+  
+  if (isNeutralAnimation && neutralPoseCache && neutralPoseCache.size > 0) {
+    console.log('🔄 Replacing file-loaded neutral pose with animation skeleton state');
+  }
+  
+  const poseData = new Map<string, THREE.Quaternion>();
+  
+  skeleton.bones.forEach(bone => {
+    poseData.set(bone.name, bone.quaternion.clone());
+  });
+  
+  console.log(`✅ Captured Neutral Position reference from skeleton (${poseData.size} bones)`);
+  
+  // Diagnostic: Log key joint rotations
+  const diagnosticBones = ['mixamorig1LeftArm', 'mixamorig1RightArm', 'mixamorig1LeftForeArm', 'mixamorig1RightForeArm'];
+  console.log('🔍 NEUTRAL POSE ROTATIONS (captured from skeleton):');
+  diagnosticBones.forEach(boneName => {
+    const quat = poseData.get(boneName);
+    if (quat) {
+      const euler = new THREE.Euler().setFromQuaternion(quat, 'XYZ');
+      console.log(`  ${boneName}: x=${THREE.MathUtils.radToDeg(euler.x).toFixed(1)}° y=${THREE.MathUtils.radToDeg(euler.y).toFixed(1)}° z=${THREE.MathUtils.radToDeg(euler.z).toFixed(1)}°`);
+    }
+  });
+  
+  neutralPoseCache = poseData;
+  neutralPosePromise = Promise.resolve(poseData);
+  return true;
+}
+
+/**
+ * Check if current bone state matches neutral pose (for debugging)
+ * 
+ * @param bone - Bone to check
+ * @returns Angle difference in degrees
+ */
+export function getNeutralPoseDeviation(bone: THREE.Bone): number {
+  const neutralQuat = getNeutralPoseRotation(bone.name);
+  
+  if (!neutralQuat) {
+    return NaN;
+  }
+  
+  // Calculate angular difference between current and neutral
+  const angle = bone.quaternion.angleTo(neutralQuat);
+  return THREE.MathUtils.radToDeg(angle);
 }
 
 /**
