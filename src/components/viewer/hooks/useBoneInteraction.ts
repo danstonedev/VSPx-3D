@@ -46,7 +46,7 @@ export function useBoneInteraction({
   skinnedMesh,
   ikSolver,
   ikTargets,
-  jointHandleBones,
+  // jointHandleBones,
   enabled,
   isReady,
   showDebugInfo,
@@ -439,7 +439,7 @@ export function useBoneInteraction({
     setHighlightedBone,
     hoverBone,
     isShiftHeld,
-    constraintViolations,
+    // constraintViolations,
     handlers: {
       handlePointerDown,
       handlePointerMove,
