@@ -22,7 +22,7 @@ export const JOINTS: Record<string, JointDef> = {
   // ============================================================================
   // RIGHT SHOULDER COMPLEX (ST + GH)
   // ============================================================================
-  
+
   st_right: {
     id: 'st_right',
     displayName: 'Right Scapulothoracic',
@@ -67,7 +67,7 @@ export const JOINTS: Record<string, JointDef> = {
       },
     ],
   },
-  
+
   gh_right: {
     id: 'gh_right',
     displayName: 'Right Glenohumeral',
@@ -113,11 +113,11 @@ export const JOINTS: Record<string, JointDef> = {
       },
     ],
   },
-  
+
   // ============================================================================
   // LEFT SHOULDER COMPLEX (ST + GH)
   // ============================================================================
-  
+
   st_left: {
     id: 'st_left',
     displayName: 'Left Scapulothoracic',
@@ -162,7 +162,7 @@ export const JOINTS: Record<string, JointDef> = {
       },
     ],
   },
-  
+
   gh_left: {
     id: 'gh_left',
     displayName: 'Left Glenohumeral',
@@ -209,28 +209,46 @@ export const JOINTS: Record<string, JointDef> = {
       },
     ],
   },
-  
+
   // ============================================================================
   // RIGHT ELBOW
   // ============================================================================
-  
+
+  /**
+   * ELBOW BIOMECHANICS (Gold Standard / ISB Definition):
+   * The elbow complex consists of three joints:
+   * 1. Humeroulnar Joint (HUJ): Hinge joint for Flexion/Extension.
+   * 2. Humeroradial Joint (HRJ): Gliding joint, moves with HUJ.
+   * 3. Proximal Radioulnar Joint (PRUJ): Pivot joint for Pronation/Supination.
+   * 
+   * MODELING STRATEGY:
+   * In a single-bone forearm rig (Mixamo), we map these to a 3-DOF joint:
+   * - Primary Axis (Z): Flexion/Extension (Humeroulnar).
+   * - Long Axis (X): Pronation/Supination (Radioulnar).
+   * - Floating Axis (Y): Varus/Valgus (Carrying Angle & Laxity).
+   * 
+   * EULER ORDER 'ZXY' (Flexion -> Pronation -> Varus):
+   * We prioritize Flexion (Z) as the frame-defining rotation.
+   * Then Pronation (X) occurs along the displaced long axis.
+   * Finally Varus/Valgus (Y) is the small deviation/laxity.
+   */
   elbow_right: {
     id: 'elbow_right',
     displayName: 'Right Elbow',
     parentSegment: 'humerus_right',
     childSegment: 'radius_right',
-    type: 'ball', // Changed to ball to allow Pronation/Supination
-    eulerOrder: 'ZXY',
+    type: 'ball',
+    eulerOrder: 'ZXY', // Critical: Flexion (Z) first to establish the plane
     side: 'right',
     coordinates: [
       {
         id: 'elbow_r_flexion',
         jointId: 'elbow_right',
         displayName: 'Elbow Flexion',
-        axis: 'Z',
-        index: 2,
+        axis: 'Z', // Z-axis is the hinge axis in anatomical position
+        index: 2,  // Maps to 3rd Euler component (Z)
         neutral: 0,
-        range: { min: 0, max: 145 * DEG_TO_RAD },
+        range: { min: 0, max: 150 * DEG_TO_RAD }, // ISB: 0-150°
         clamped: true,
         locked: false,
       },
@@ -238,20 +256,31 @@ export const JOINTS: Record<string, JointDef> = {
         id: 'elbow_r_pronation',
         jointId: 'elbow_right',
         displayName: 'Forearm Pronation/Supination',
-        axis: 'Y',
-        index: 1,
+        axis: 'X', // X-axis is the longitudinal axis of the forearm
+        index: 0,  // Maps to 1st Euler component (X)
         neutral: 0,
-        range: { min: -90 * DEG_TO_RAD, max: 90 * DEG_TO_RAD },
+        range: { min: -90 * DEG_TO_RAD, max: 90 * DEG_TO_RAD }, // ISB: -90 (Sup) to 90 (Pro)
+        clamped: true,
+        locked: false,
+      },
+      {
+        id: 'elbow_r_varus',
+        jointId: 'elbow_right',
+        displayName: 'Elbow Varus/Valgus (Laxity)',
+        axis: 'Y', // Y-axis is the carrying angle / deviation
+        index: 1,  // Maps to 2nd Euler component (Y)
+        neutral: 0,
+        range: { min: -10 * DEG_TO_RAD, max: 10 * DEG_TO_RAD }, // Small laxity range
         clamped: true,
         locked: false,
       },
     ],
   },
-  
+
   // ============================================================================
   // LEFT ELBOW
   // ============================================================================
-  
+
   elbow_left: {
     id: 'elbow_left',
     displayName: 'Left Elbow',
@@ -268,7 +297,7 @@ export const JOINTS: Record<string, JointDef> = {
         axis: 'Z',
         index: 2,
         neutral: 0,
-        range: { min: 0, max: 145 * DEG_TO_RAD },
+        range: { min: 0, max: 150 * DEG_TO_RAD },
         clamped: true,
         locked: false,
       },
@@ -276,20 +305,31 @@ export const JOINTS: Record<string, JointDef> = {
         id: 'elbow_l_pronation',
         jointId: 'elbow_left',
         displayName: 'Forearm Pronation/Supination',
-        axis: 'Y',
-        index: 1,
+        axis: 'X',
+        index: 0,
         neutral: 0,
         range: { min: -90 * DEG_TO_RAD, max: 90 * DEG_TO_RAD },
         clamped: true,
         locked: false,
       },
+      {
+        id: 'elbow_l_varus',
+        jointId: 'elbow_left',
+        displayName: 'Elbow Varus/Valgus (Laxity)',
+        axis: 'Y',
+        index: 1,
+        neutral: 0,
+        range: { min: -10 * DEG_TO_RAD, max: 10 * DEG_TO_RAD },
+        clamped: true,
+        locked: false,
+      },
     ],
   },
-  
+
   // ============================================================================
   // RIGHT HIP
   // ============================================================================
-  
+
   hip_right: {
     id: 'hip_right',
     displayName: 'Right Hip',
@@ -335,11 +375,11 @@ export const JOINTS: Record<string, JointDef> = {
       },
     ],
   },
-  
+
   // ============================================================================
   // LEFT HIP
   // ============================================================================
-  
+
   hip_left: {
     id: 'hip_left',
     displayName: 'Left Hip',
@@ -384,11 +424,11 @@ export const JOINTS: Record<string, JointDef> = {
       },
     ],
   },
-  
+
   // ============================================================================
   // RIGHT KNEE
   // ============================================================================
-  
+
   knee_right: {
     id: 'knee_right',
     displayName: 'Right Knee',
@@ -433,11 +473,11 @@ export const JOINTS: Record<string, JointDef> = {
       },
     ],
   },
-  
+
   // ============================================================================
   // LEFT KNEE
   // ============================================================================
-  
+
   knee_left: {
     id: 'knee_left',
     displayName: 'Left Knee',

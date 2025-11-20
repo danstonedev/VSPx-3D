@@ -130,7 +130,7 @@ export class BiomechState {
   /**
    * Calibrate neutral pose from current skeleton state
    * This captures q_neutral for all joints based on the current animation frame
-   * Typically called when Neutral.glb is loaded
+   * Typically called when Neutral_Model.glb is loaded
    * 
    * @param animationName - Optional name of the animation being calibrated
    * @returns Calibration result with diagnostics

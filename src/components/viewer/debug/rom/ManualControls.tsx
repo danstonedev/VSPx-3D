@@ -3,9 +3,8 @@ import * as THREE from 'three';
 import { getBiomechMovementLabel } from '../../utils/jointLabels';
 import { getSegmentByBoneName } from '../../../../biomech/model/segments';
 import { getParentJoint } from '../../../../biomech/model/joints';
-import { resetBoneToRest, setRelativeEuler, validateRotation } from '../../constraints/constraintValidator'; // @deprecated - TODO: Migrate to biomechState.computeJointState() in Phase 2
+import { resetBoneToRest, setRelativeEuler, validateRotation, getConstraintForBone, getLimitsFromJointDef } from '../../constraints/constraintValidator'; // @deprecated - TODO: Migrate to biomechState.computeJointState() in Phase 2
 import type { BiomechState } from '../../../../biomech/engine/biomechState';
-import { getConstraintForBone } from '../../constraints/jointConstraints';
 
 interface ManualControlsProps {
   selectedBone: THREE.Bone;
@@ -32,6 +31,8 @@ export function ManualControls({
 }: ManualControlsProps) {
   const constraint = getConstraintForBone(selectedBone.name);
   if (!constraint) return null;
+  
+  const limits = getLimitsFromJointDef(constraint);
 
   const applyManualRotation = (axis: 'x' | 'y' | 'z', degrees: number) => {
     if (!selectedBone) return;
@@ -59,7 +60,7 @@ export function ManualControls({
 
   const applyCoordinateChange = (coordId: string, valueDeg: number) => {
     if (!selectedBone || !biomechState || !biomechState.isCalibrated()) return;
-    
+
     const segment = getSegmentByBoneName(selectedBone.name);
     const joint = segment ? getParentJoint(segment.id) : null;
     if (!joint) return;
@@ -68,18 +69,18 @@ export function ManualControls({
     // This prevents "drift" where small read-back errors accumulate when modifying one axis
     const baseCoords = localCoordinates || jointCoordinates || {};
     const newCoords = { ...baseCoords, [coordId]: valueDeg };
-    
+
     setLocalCoordinates(newCoords);
-    
+
     // Construct the [q0, q1, q2] array expected by applyCoordinates
     // qValues corresponds to [x, y, z] components of the Euler angle
     // The order of application is determined by joint.eulerOrder (e.g., YZX)
     const qValues: [number, number, number] = [0, 0, 0];
-    
+
     joint.coordinates.forEach(coord => {
       const valDeg = newCoords[coord.id] ?? 0;
       if (coord.index >= 0 && coord.index < 3) {
-          qValues[coord.index] = THREE.MathUtils.degToRad(valDeg);
+        qValues[coord.index] = THREE.MathUtils.degToRad(valDeg);
       }
     });
 
@@ -111,12 +112,12 @@ export function ManualControls({
             </div>
           )}
           <p className="control-mode-label">
-              Mode: Coordinate Control ({joint.displayName})
+            Mode: Coordinate Control ({joint.displayName})
           </p>
           {joint.coordinates.map(coord => (
             <label key={coord.id} className="manual-row">
               <span className="axis truncated" title={coord.displayName}>
-                  {coord.displayName}:
+                {coord.displayName}:
               </span>
               <input
                 type="range"
@@ -135,26 +136,26 @@ export function ManualControls({
         </>
       ) : (
         <>
-            <p className="control-mode-label">
-                Mode: Bone Rotation (Euler)
-            </p>
-            {(['x', 'y', 'z'] as const).map((axis) => (
+          <p className="control-mode-label">
+            Mode: Bone Rotation (Euler)
+          </p>
+          {(['x', 'y', 'z'] as const).map((axis) => (
             <label key={axis} className="manual-row">
-                <span className="axis">{getBiomechMovementLabel(selectedBone.name, axis)}:</span>
-                <input
+              <span className="axis">{getBiomechMovementLabel(selectedBone.name, axis)}:</span>
+              <input
                 type="range"
-                min={THREE.MathUtils.radToDeg(constraint.rotationLimits[axis][0])}
-                max={THREE.MathUtils.radToDeg(constraint.rotationLimits[axis][1])}
+                min={THREE.MathUtils.radToDeg(limits[axis][0])}
+                max={THREE.MathUtils.radToDeg(limits[axis][1])}
                 step={0.5}
                 value={manualAngles[axis] ?? 0}
                 onChange={(event) => applyManualRotation(axis, Number(event.target.value))}
                 onPointerDown={() => setActiveAxis(axis)}
                 onPointerUp={() => setActiveAxis(null)}
                 onPointerLeave={() => setActiveAxis(null)}
-                />
-                <span className="manual-value">{(manualAngles[axis] ?? 0).toFixed(1)}°</span>
+              />
+              <span className="manual-value">{(manualAngles[axis] ?? 0).toFixed(1)}°</span>
             </label>
-            ))}
+          ))}
         </>
       )}
       <button className="control-btn" onClick={handleJointReset}>

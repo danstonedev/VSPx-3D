@@ -11,11 +11,11 @@ import { Html } from '@react-three/drei';
 import * as THREE from 'three';
 import { CCDIKHelper } from 'three/examples/jsm/animation/CCDIKSolver.js';
 import { RotationCompensatedIKSolver } from './utils/RotationCompensatedIKSolver';
-import { 
+import {
   buildIKConfiguration,
-  findBoneByName, 
-  getIKChainConfig, 
-  updateIKTarget 
+  findBoneByName,
+  getIKChainConfig,
+  updateIKTarget
 } from './utils/ikSolverConfig';
 import { SKELETON_MAP } from './utils/skeletonMap';
 import { JOINT_HANDLE_NAMES } from './utils/jointLabels';
@@ -27,6 +27,7 @@ import { useCoordinateEngine } from './utils/debugFlags';
 
 import { capturePoseSnapshot, diffPoseSnapshots, formatPoseDeltas, type PoseSnapshot } from './utils/skeletonDiagnostics';
 import { useBoneInteraction } from './hooks/useBoneInteraction';
+import { DigitalGoniometer } from './debug/DigitalGoniometer';
 import './InteractiveBoneController.css'
 
 // Global feature flag to table IK end-to-end without removing code paths
@@ -64,18 +65,18 @@ export default function InteractiveBoneController({
   onDragEnd,
   resetCounter = 0,
 }: InteractiveBoneControllerProps) {
-  
+
   const animationId = useViewerSelector(state => state.playback.animationId);
   const biomechState = useViewerSelector(state => state.ik.biomechState); // Get biomechState from store
   const dispatch = useViewerDispatch();
   const [ikSolver, setIkSolver] = useState<RotationCompensatedIKSolver | null>(null);
   const [ikHelper, setIkHelper] = useState<CCDIKHelper | null>(null);
   const [ikTargets, setIkTargets] = useState<Map<string, THREE.Bone>>(new Map());
-  
+
   // Phase 2: Coordinate engine state (only created if feature flag enabled)
   const biomechStateRef = useRef<BiomechState | null>(null);
   const coordinateEngineEnabled = useCoordinateEngine();
-  
+
   // Debug: Log feature flag status on mount
   useEffect(() => {
     console.log(`🧬 Coordinate engine ${coordinateEngineEnabled ? 'ENABLED' : 'DISABLED'}`);
@@ -107,7 +108,7 @@ export default function InteractiveBoneController({
       dispatch({ type: 'ik/setBiomechState', biomechState: null });
     };
   }, [dispatch]);
-  
+
   const [isReady, setIsReady] = useState(false);
   const bindPoseRef = useRef<Map<string, { position: THREE.Vector3; quaternion: THREE.Quaternion; scale: THREE.Vector3 }>>(new Map());
   const armatureBindPoseRef = useRef<{ position: THREE.Vector3; quaternion: THREE.Quaternion; scale: THREE.Vector3 } | null>(null);
@@ -127,7 +128,7 @@ export default function InteractiveBoneController({
     console.log(`🧪 Pose delta (${label}) — ${deltas.length}/${skeleton.bones.length} bones:
 ${formatPoseDeltas(deltas)}`);
   }, [showDebugInfo, skeleton]);
-  
+
   const effectorWorldPos = useMemo(() => new THREE.Vector3(), []);
   const targetWorldPos = useMemo(() => new THREE.Vector3(), []);
   const jointHandleBones = useMemo(() => {
@@ -138,31 +139,31 @@ ${formatPoseDeltas(deltas)}`);
   // Scapulohumeral Rhythm Logic
   const applyShoulderRhythm = useCallback(() => {
     if (!skeleton) return;
-    
+
     const applySide = (armName: string, shoulderName: string, spineName: string, isLeft: boolean) => {
       const arm = findBoneByName(skeleton, armName);
       const shoulder = findBoneByName(skeleton, shoulderName);
       const spine = findBoneByName(skeleton, spineName);
-      
+
       if (!arm || !shoulder || !spine) return;
-      
+
       // Calculate Arm elevation relative to Spine (Thorax)
       // Use world vectors to determine angle
       const armVector = new THREE.Vector3(0, 1, 0).applyQuaternion(arm.quaternion);
       const spineVector = new THREE.Vector3(0, 1, 0).applyQuaternion(spine.quaternion);
-      
+
       // Angle between arm and spine
       const angleRad = armVector.angleTo(spineVector);
       const angleDeg = THREE.MathUtils.radToDeg(angleRad);
-      
+
       // Elevation is roughly (180 - angleDeg)
       let elevation = 180 - angleDeg;
       elevation = Math.max(0, Math.min(180, elevation));
-      
+
       // Scapulohumeral Rhythm: 2:1 ratio.
       // Total Elevation = GH + ST.
       // ST = Total / 3.
-      
+
       // CRITICAL FIX: The restPose is the T-pose (Arm Elev ~90°).
       // In T-pose, the clavicle is already elevated ~20-30°.
       // If we just apply 'targetST' (e.g. 0° for arms down) as an absolute rotation on top of T-pose,
@@ -173,31 +174,31 @@ ${formatPoseDeltas(deltas)}`);
       // T-pose corresponds to ~90° arm elevation.
       const tPoseArmElevation = 90;
       const deltaElevation = elevation - tPoseArmElevation;
-      
+
       // ST moves 1 degree for every 3 degrees of arm elevation
       const stRotationDelta = deltaElevation / 3;
-      
+
       // Apply ST rotation to Shoulder bone (Clavicle)
       // We assume Z axis is elevation axis for Clavicle (based on joints.ts st_right/left)
       const restPose = ikRestPoseRef.current.get(shoulder.uuid);
       if (!restPose) return;
-      
+
       const restQuat = restPose.quaternion.clone();
       const axis = new THREE.Vector3(0, 0, 1);
       // Heuristic: Left = -Z, Right = +Z for elevation (based on joints.ts)
       // st_right: Z is Upward Rotation. Range -10 to 60.
       // st_left: Z is Upward Rotation.
-      const sign = isLeft ? -1 : 1; 
-      
+      const sign = isLeft ? -1 : 1;
+
       const rotation = new THREE.Quaternion().setFromAxisAngle(axis, THREE.MathUtils.degToRad(stRotationDelta * sign));
-      
+
       shoulder.quaternion.copy(restQuat.multiply(rotation));
       shoulder.updateMatrixWorld(true);
     };
-    
+
     applySide(SKELETON_MAP.LeftArm, SKELETON_MAP.LeftShoulder, SKELETON_MAP.Spine2, true);
     applySide(SKELETON_MAP.RightArm, SKELETON_MAP.RightShoulder, SKELETON_MAP.Spine2, false);
-    
+
   }, [skeleton]);
 
   // Use the new interaction hook
@@ -245,7 +246,7 @@ ${formatPoseDeltas(deltas)}`);
       }
     });
   }, [effectorWorldPos, targetWorldPos, skeleton, ikTargets]);
-  
+
   // Initialize IK system
   const captureBindPose = useCallback(() => {
     if (!skeleton) return;
@@ -280,7 +281,7 @@ ${formatPoseDeltas(deltas)}`);
     if (!skeleton) return false;
     const storage = bindPoseRef.current;
     if (storage.size === 0) return false;
-    
+
     // Restore Armature transform first
     const armature = skeleton.bones[0]?.parent;
     if (armature && armatureBindPoseRef.current) {
@@ -306,14 +307,14 @@ ${formatPoseDeltas(deltas)}`);
   // ALWAYS capture constraint reference pose (needed for ROM panel in both modes)
   useEffect(() => {
     if (!skeleton || bindPoseRef.current.size > 0) return;
-    
+
     const initializeController = async () => {
       try {
         // SUCCESS: Neutral_Model.glb contains BOTH mesh geometry AND anatomical neutral pose
         // The skeleton is already in the correct calibration pose - no transform needed!
-        
+
         console.log('📸 Capturing Anatomical Neutral Pose (base model is Neutral_Model.glb)...');
-        
+
         // Capture current skeleton state as bind pose
         skeleton.bones.forEach((bone) => {
           bindPoseRef.current.set(bone.uuid, {
@@ -322,32 +323,32 @@ ${formatPoseDeltas(deltas)}`);
             scale: bone.scale.clone()
           });
         });
-        
+
         console.log('✅ Controller initialized with Anatomical Neutral Pose (from Neutral_Model.glb)');
-        
+
         // Capture biomech neutral pose for joint coordinate systems
         console.log('🔬 Capturing biomech neutral pose for joint coordinate systems...');
         captureJointNeutralPose(skeleton);
-        
+
         // Phase 2: Initialize coordinate engine if enabled
         if (coordinateEngineEnabled && !biomechStateRef.current) {
-           console.log('🚀 Phase 2: Initializing coordinate engine...');
-           biomechStateRef.current = new BiomechState();
-           const initResult = biomechStateRef.current.initialize(skeleton);
-           
-           if (initResult.success) {
-             dispatch({ type: 'ik/setBiomechState', biomechState: biomechStateRef.current });
-             
-             // Calibrate immediately since we are now in Neutral Pose
-             const calibResult = biomechStateRef.current.calibrateNeutral('Neutral.glb (File)');
-             if (calibResult.success) {
-                setCalibrationVersion(v => v + 1);
-             }
-           }
+          console.log('🚀 Phase 2: Initializing coordinate engine...');
+          biomechStateRef.current = new BiomechState();
+          const initResult = biomechStateRef.current.initialize(skeleton);
+
+          if (initResult.success) {
+            dispatch({ type: 'ik/setBiomechState', biomechState: biomechStateRef.current });
+
+            // Calibrate immediately since we are now in Neutral Pose
+            const calibResult = biomechStateRef.current.calibrateNeutral('Neutral_Model.glb (File)');
+            if (calibResult.success) {
+              setCalibrationVersion(v => v + 1);
+            }
+          }
         }
-        
+
         setIsReady(true);
-        
+
       } catch (err) {
         console.error('❌ Failed to load Neutral Pose:', err);
         // Fallback: Capture current state (better than nothing, but might be T-pose or animated)
@@ -355,9 +356,9 @@ ${formatPoseDeltas(deltas)}`);
         setIsReady(true);
       }
     };
-    
+
     initializeController();
-    
+
     return () => {
       clearConstraintReferencePose();
       clearJointNeutralPose();
@@ -373,7 +374,7 @@ ${formatPoseDeltas(deltas)}`);
       setIsReady(true);
       return;
     }
-    
+
     try {
       console.log('🎯 Initializing Interactive Bone Controller...');
       console.log('🔍 SkinnedMesh bindMatrix:', skinnedMesh.bindMatrix);
@@ -381,7 +382,7 @@ ${formatPoseDeltas(deltas)}`);
       console.log('🔍 First bone inverse:', skeleton.boneInverses[0]);
       console.log('🔍 Skeleton bones:', skeleton.bones.length);
       console.log('🔍 Skeleton inverses:', skeleton.boneInverses.length);
-      
+
       // DIAGNOSTIC: Check raw model T-pose BEFORE any IK setup
       const rightUpLegRaw = skeleton.bones.find(b => b.name === 'mixamorig1RightUpLeg');
       const leftUpLegRaw = skeleton.bones.find(b => b.name === 'mixamorig1LeftUpLeg');
@@ -392,7 +393,7 @@ ${formatPoseDeltas(deltas)}`);
         console.log(`   RightUpLeg: x=${(rEulerRaw.x * 180 / Math.PI).toFixed(1)}° y=${(rEulerRaw.y * 180 / Math.PI).toFixed(1)}° z=${(rEulerRaw.z * 180 / Math.PI).toFixed(1)}°`);
         console.log(`   LeftUpLeg:  x=${(lEulerRaw.x * 180 / Math.PI).toFixed(1)}° y=${(lEulerRaw.y * 180 / Math.PI).toFixed(1)}° z=${(lEulerRaw.z * 180 / Math.PI).toFixed(1)}°`);
       }
-      
+
       // Just ensure matrices are up to date - DO NOT call calculateInverses() or pose()
       // The skeleton was already correctly bound by normalizeHumanModel()
       skeleton.bones.forEach(b => b.updateMatrixWorld(true));
@@ -403,18 +404,18 @@ ${formatPoseDeltas(deltas)}`);
         const testBoneIndex = 0; // Usually Hips
         const testBone = skeleton.bones[testBoneIndex];
         const inverse = skeleton.boneInverses[testBoneIndex];
-        
+
         if (testBone && inverse) {
           const worldMatrix = testBone.matrixWorld.clone();
           const product = new THREE.Matrix4().multiplyMatrices(worldMatrix, inverse);
           const identity = new THREE.Matrix4();
-          
+
           // Check if product is close to identity
           let maxDiff = 0;
           for (let i = 0; i < 16; i++) {
             maxDiff = Math.max(maxDiff, Math.abs(product.elements[i] - identity.elements[i]));
           }
-          
+
           if (maxDiff < 0.01) {
             console.log('✅ Bone inverses verified: aligned with current bind pose');
           } else {
@@ -459,7 +460,7 @@ ${formatPoseDeltas(deltas)}`);
           });
         }
       });
-      
+
       // ALWAYS log hip angles when capturing rest pose (unconditional diagnostic)
       const rightUpLeg = skeleton.bones.find(b => b.name === 'mixamorig1RightUpLeg');
       const leftUpLeg = skeleton.bones.find(b => b.name === 'mixamorig1LeftUpLeg');
@@ -474,42 +475,42 @@ ${formatPoseDeltas(deltas)}`);
 
       // Build IK configuration AFTER capturing rest pose
       const { iks, targets } = buildIKConfiguration(skeleton, skeletonRoot, biomechState);
-      
+
       if (iks.length === 0) {
         console.warn('No valid IK chains created');
         return;
       }
-      
+
       console.log('🦴 IK Setup:');
       console.log('  - Chains:', iks.length);
       console.log('  - Targets:', targets.size);
       console.log('  - Sample target pos:', Array.from(targets.values())[0]?.position);
-      
+
       // Create RotationCompensatedIKSolver to handle the Armature's 90° rotation
       const solver = new RotationCompensatedIKSolver(skinnedMesh, iks);
       setIkSolver(solver);
-      
+
       // Create visual helper (for debugging)
       if (showDebugInfo) {
         const helper = new CCDIKHelper(skinnedMesh, iks, 0.03);
         setIkHelper(helper);
         skeletonRoot.add(helper);
       }
-      
+
       // CRITICAL: Bind pose and IK rest pose already captured at the start
       // (See lines ~193-230 above where we capture both BEFORE any IK setup)
-      
+
       setIkTargets(targets);
       setIsReady(true);
       restPoseSnapshotRef.current = capturePoseSnapshot(skeleton);
       console.log('✅ IK Controller ready (constraint reference already locked to T-pose)');
-      
+
       console.log(`✅ IK Controller ready: ${iks.length} chains, ${targets.size} targets`);
-      
+
     } catch (error) {
       console.error('❌ IK Controller initialization failed:', error);
     }
-    
+
     return () => {
       // Cleanup IK-specific resources only
       if (ikHelper) {
@@ -552,18 +553,18 @@ ${formatPoseDeltas(deltas)}`);
       } else {
         skeleton.bones.forEach(b => b.updateMatrixWorld(true));
       }
-      
+
       // NOTE: Do NOT recapture constraint reference pose here!
       // The constraint reference is IMMUTABLE and was locked to the anatomical T-pose at initialization.
       // Recapturing would pollute it with any accumulated drift or manual adjustments.
       restPoseSnapshotRef.current = capturePoseSnapshot(skeleton);
-      
+
       // Re-sync all IK targets to their effector positions
       syncIKTargetsToEffectors();
-      
+
       // NO ikSolver.update() needed - targets are already at effector positions
       // Calling update() here would try to solve IK with targets at current positions = no-op or worse
-      
+
       setHighlightedBone(null);
       onBoneSelect?.(null);
       onConstraintViolation?.([]);
@@ -598,7 +599,7 @@ ${formatPoseDeltas(deltas)}`);
     if (!isReady || dragStateRef.current.isDragging) return;
     syncIKTargetsToEffectors();
   }, [isReady, syncIKTargetsToEffectors, dragStateRef]);
-  
+
   // Continuous IK solving and constraint checking
   useFrame(() => {
     if (!ikSolver || !enabled) return;
@@ -608,26 +609,26 @@ ${formatPoseDeltas(deltas)}`);
       applyShoulderRhythm();
     }
   });
-  
+
   // Phase 2: Update coordinate engine every frame
   useFrame((_, delta) => {
     if (!coordinateEngineEnabled || !biomechStateRef.current) return;
     if (!biomechStateRef.current.isCalibrated()) return;
-    
+
     const updateResult = biomechStateRef.current.update(delta);
-    
+
     // Log violations only if verbose debugging enabled
     if (showDebugInfo && updateResult.violations.length > 0) {
-      console.log(`⚠️ Coordinate ROM violations (${updateResult.violations.length}):`, 
+      console.log(`⚠️ Coordinate ROM violations (${updateResult.violations.length}):`,
         updateResult.violations.slice(0, 3) // Only log first 3
       );
     }
   });
-  
+
   if (!isReady) {
     return null;
   }
-  
+
   return (
     <>
       {/* Interaction layer: invisible capture volume around the model.
@@ -643,15 +644,15 @@ ${formatPoseDeltas(deltas)}`);
         <boxGeometry args={[1.2, 2.2, 1.0]} />
         <meshBasicMaterial transparent opacity={0} depthWrite={false} />
       </mesh>
-      
+
       {/* Visual feedback */}
       {showVisualFeedback && (
         <>
           {/* IK targets only visible in IK mode */}
           {!playbackMode && Array.from(ikTargets.entries()).map(([chainName, target]) => (
-            <IKTargetSphere 
-              key={chainName} 
-              target={target} 
+            <IKTargetSphere
+              key={chainName}
+              target={target}
               isActive={dragStateRef.current.ikTarget === target}
               size={0.12}
               renderOrder={1000}
@@ -686,17 +687,29 @@ ${formatPoseDeltas(deltas)}`);
               />
             ))
           )}
-          
+
           {highlightedBone && (
             <BoneHighlight bone={highlightedBone} color="#00ff00" size={0.06} />
           )}
-          
+
           {hoverBone && hoverBone !== highlightedBone && (
             <BoneHighlight bone={hoverBone} color="#ffff00" size={0.04} opacity={0.5} />
           )}
+
+          {/* Digital Goniometer - appears when joint is selected */}
+          {highlightedBone && skeleton && (
+            <DigitalGoniometer
+              bone={highlightedBone}
+              skeleton={skeleton}
+              biomechState={biomechState}
+              size={0.25}
+              opacity={0.12}
+              showLabels={true}
+            />
+          )}
         </>
       )}
-      
+
       {/* Debug info */}
       {showDebugInfo && (
         <Html position={[0, 2.5, 0]} center>
@@ -722,7 +735,7 @@ ${formatPoseDeltas(deltas)}`);
           </div>
         </Html>
       )}
-      
+
       {/* IK Helper (if enabled) */}
       {ikHelper && <primitive object={ikHelper} />}
     </>
@@ -732,38 +745,38 @@ ${formatPoseDeltas(deltas)}`);
 /**
  * Visual highlight for selected/hovered bones
  */
-function BoneHighlight({ 
-  bone, 
-  color = '#00ff00', 
-  size = 0.05, 
-  opacity = 0.7 
-}: { 
-  bone: THREE.Bone; 
-  color?: string; 
-  size?: number; 
+function BoneHighlight({
+  bone,
+  color = '#00ff00',
+  size = 0.05,
+  opacity = 0.7
+}: {
+  bone: THREE.Bone;
+  color?: string;
+  size?: number;
   opacity?: number;
 }) {
   const meshRef = useRef<THREE.Mesh>(null);
-  
+
   useFrame(() => {
     if (!meshRef.current) return;
-    
+
     const worldPos = new THREE.Vector3();
     bone.getWorldPosition(worldPos);
     meshRef.current.position.copy(worldPos);
-    
+
     // Pulse animation
     const scale = size + Math.sin(Date.now() * 0.004) * (size * 0.2);
     meshRef.current.scale.setScalar(scale);
   });
-  
+
   return (
     <mesh ref={meshRef}>
       <sphereGeometry args={[1, 16, 16]} />
-      <meshBasicMaterial 
-        color={color} 
-        transparent 
-        opacity={opacity} 
+      <meshBasicMaterial
+        color={color}
+        transparent
+        opacity={opacity}
         depthTest={false}
       />
     </mesh>
@@ -773,26 +786,26 @@ function BoneHighlight({
 /**
  * Clickable IK target sphere
  */
-function IKTargetSphere({ 
-  target, 
+function IKTargetSphere({
+  target,
   isActive,
   size = 0.12,
   renderOrder = 1000
-}: { 
-  target: THREE.Bone; 
+}: {
+  target: THREE.Bone;
   isActive: boolean;
   size?: number;
   renderOrder?: number;
 }) {
   const meshRef = useRef<THREE.Mesh>(null);
-  
+
   useFrame(() => {
     if (!meshRef.current) return;
-    
+
     const worldPos = new THREE.Vector3();
     target.getWorldPosition(worldPos);
     meshRef.current.position.copy(worldPos);
-    
+
     // Pulse effect when active
     if (isActive) {
       const scale = size + Math.sin(Date.now() * 0.006) * (size * 0.2);
@@ -801,15 +814,15 @@ function IKTargetSphere({
       meshRef.current.scale.setScalar(size);
     }
   });
-  
+
   return (
     <mesh ref={meshRef} renderOrder={renderOrder}>
       <sphereGeometry args={[1, 16, 16]} />
-      <meshStandardMaterial 
+      <meshStandardMaterial
         color={isActive ? "#00ff00" : "#ffaa00"}
         emissive={isActive ? "#00ff00" : "#ff8800"}
         emissiveIntensity={0.5}
-        transparent 
+        transparent
         opacity={0.9}
         depthTest={false}
       />
@@ -828,11 +841,11 @@ type JointHandleProps = {
   renderOrder?: number;
 };
 
-function JointHandle({ 
-  bone, 
-  isSelected, 
+function JointHandle({
+  bone,
+  isSelected,
   isShiftHeld,
-  onSelect, 
+  onSelect,
   onHover,
   size = 0.04,
   opacity = 0.65,
@@ -846,7 +859,7 @@ function JointHandle({
     const worldPos = new THREE.Vector3();
     bone.getWorldPosition(worldPos);
     meshRef.current.position.copy(worldPos);
-    
+
     // Size feedback: larger when selected or when Shift+hover
     let targetSize = size;
     if (isSelected) {
@@ -854,7 +867,7 @@ function JointHandle({
     } else if (isHovered && isShiftHeld) {
       targetSize = size * 1.3; // Grow when hovering with Shift
     }
-    
+
     meshRef.current.scale.setScalar(targetSize);
   });
 
@@ -908,7 +921,7 @@ function PlaybackJointHandle({ bone, isSelected, onSelect, size = 0.05 }: Playba
     const worldPos = new THREE.Vector3();
     bone.getWorldPosition(worldPos);
     meshRef.current.position.copy(worldPos);
-    
+
     // Scale feedback for selection and hover
     let targetSize = size;
     if (isSelected) {

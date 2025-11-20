@@ -1,7 +1,7 @@
 /**
  * Neutral Pose Loader
  * 
- * Loads the Neutral Position (anatomical reference pose) from Neutral.glb
+ * Loads the Neutral Position (anatomical reference pose) from Neutral_Model.glb
  * and uses it to establish the baseline for all joint angle measurements.
  * 
  * NEUTRAL POSITION DEFINITION:
@@ -19,7 +19,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three-stdlib';
 import { withBase } from '../../../shared/config';
 
-const NEUTRAL_POSE_PATH = withBase('models/animations/Neutral.glb');
+const NEUTRAL_POSE_PATH = withBase('models/animations/Neutral_Model.glb');
 
 // Cache for the neutral pose skeleton data
 let neutralPoseCache: Map<string, THREE.Quaternion> | null = null;
@@ -55,7 +55,7 @@ export async function loadNeutralPose(): Promise<Map<string, THREE.Quaternion>> 
         
         // First, check if there's animation data and extract the first frame
         if (gltf.animations && gltf.animations.length > 0) {
-          console.log(`📊 Neutral.glb has ${gltf.animations.length} animation(s), using animation data`);
+          console.log(`📊 Neutral_Model.glb has ${gltf.animations.length} animation(s), using animation data`);
           // Will extract from scene skeleton below
         }
         
@@ -67,7 +67,7 @@ export async function loadNeutralPose(): Promise<Map<string, THREE.Quaternion>> 
         });
         
         if (!skeleton) {
-          console.warn('⚠️ No skeleton found in Neutral.glb loaded scene');
+          console.warn('⚠️ No skeleton found in Neutral_Model.glb loaded scene');
           // Try to find bones directly in scene
           const bones: THREE.Bone[] = [];
           gltf.scene.traverse((child: any) => {
@@ -77,7 +77,7 @@ export async function loadNeutralPose(): Promise<Map<string, THREE.Quaternion>> 
           });
           
           if (bones.length === 0) {
-            reject(new Error('No skeleton found in Neutral.glb - file may not contain armature data'));
+            reject(new Error('No skeleton found in Neutral_Model.glb - file may not contain armature data'));
             return;
           }
           
@@ -109,7 +109,7 @@ export async function loadNeutralPose(): Promise<Map<string, THREE.Quaternion>> 
       },
       undefined,
       (error) => {
-        console.error('❌ Failed to load Neutral.glb:', error);
+        console.error('❌ Failed to load Neutral_Model.glb:', error);
         neutralPosePromise = null;
         reject(error);
       }

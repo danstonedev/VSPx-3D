@@ -6,14 +6,14 @@ import { SKELETON_MAP } from '../../../utils/skeletonMap';
 describe('SkeletonAuditor', () => {
   it('should pass for a perfectly aligned Y-down bone', () => {
     const root = new THREE.Group();
-    
+
     // Create bones
     const shoulder = new THREE.Bone();
     shoulder.name = SKELETON_MAP.LeftArm;
-    
+
     const elbow = new THREE.Bone();
     elbow.name = SKELETON_MAP.LeftForeArm;
-    
+
     const wrist = new THREE.Bone();
     wrist.name = SKELETON_MAP.LeftHand;
 
@@ -25,7 +25,7 @@ describe('SkeletonAuditor', () => {
     // Position bones (Standard T-Pose: Left Arm along +X)
     // Shoulder at 0,0,0
     shoulder.position.set(0, 0, 0);
-    
+
     // Elbow at 10,0,0 (Child of Shoulder)
     // For Shoulder Y to point to Elbow (+X), Shoulder must be rotated -90 deg around Z.
     // Initial Y is (0,1,0). Rotate -90 Z -> (1,0,0).
@@ -33,7 +33,7 @@ describe('SkeletonAuditor', () => {
     elbow.position.set(0, 10, 0); // Local position relative to rotated parent!
     // Wait, if Parent is rotated, Local (0,10,0) is World (10,0,0).
     // So Elbow is at World (10,0,0).
-    
+
     // Wrist at 20,0,0 (Child of Elbow)
     // Elbow needs to point to Wrist.
     // Elbow is at World (10,0,0). Wrist is at World (20,0,0).
@@ -55,7 +55,7 @@ describe('SkeletonAuditor', () => {
 
     expect(shoulderResult).toBeDefined();
     expect(shoulderResult?.passed).toBe(true);
-    
+
     expect(elbowResult).toBeDefined();
     expect(elbowResult?.passed).toBe(true);
   });
@@ -66,7 +66,7 @@ describe('SkeletonAuditor', () => {
     shoulder.name = SKELETON_MAP.LeftArm;
     const elbow = new THREE.Bone();
     elbow.name = SKELETON_MAP.LeftForeArm;
-    
+
     root.add(shoulder);
     shoulder.add(elbow);
 
@@ -93,7 +93,7 @@ describe('SkeletonAuditor', () => {
     // This means X is the bone axis.
     // But constraints say X is the rotation axis.
     // Rotating around the bone axis is twisting, not flexing.
-    
+
     const root = new THREE.Group();
     const shoulder = new THREE.Bone();
     shoulder.name = SKELETON_MAP.LeftArm;
@@ -107,17 +107,17 @@ describe('SkeletonAuditor', () => {
     elbow.add(wrist);
 
     // Shoulder at 0. Elbow at 0 (relative to shoulder? No, need position).
-    shoulder.position.set(0,0,0);
-    elbow.position.set(0,10,0); // Shoulder Y points to Elbow
-    
+    shoulder.position.set(0, 0, 0);
+    elbow.position.set(0, 10, 0); // Shoulder Y points to Elbow
+
     // Elbow at 0,10,0 (World).
     // Wrist at 10,10,0 (World).
     // So Elbow->Wrist vector is (1,0,0) [World X].
-    
+
     // Elbow rotation is 0.
     // Elbow Local X is (1,0,0).
     // Elbow Local Y is (0,1,0).
-    
+
     // Bone Vector (Elbow->Wrist) is (1,0,0).
     // Local X is (1,0,0).
     // Dot product is 1.
@@ -126,11 +126,11 @@ describe('SkeletonAuditor', () => {
     // So rotation = twist.
     // Should fail "Hinge Axis (X) is not perpendicular".
 
-    wrist.position.set(10,0,0); // Relative to Elbow.
+    wrist.position.set(10, 0, 0); // Relative to Elbow.
     // If Elbow is at (0,10,0) World, and Wrist is at (10,0,0) Local...
     // Wrist World = Elbow World + (10,0,0) = (10,10,0).
     // Correct.
-    
+
     root.updateMatrixWorld(true);
 
     const auditor = new SkeletonAuditor(root);

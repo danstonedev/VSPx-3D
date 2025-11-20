@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { SKELETON_MAP } from '../../utils/skeletonMap';
-import { JOINT_CONSTRAINTS } from '../../constraints/jointConstraints';
+import { getConstraintForBone } from '../../constraints/constraintValidator';
 
 export interface AuditResult {
   boneName: string;
@@ -94,13 +94,13 @@ export class SkeletonAuditor {
     boneKey: string
   ): AuditResult {
     const issues: string[] = [];
-    
+
     // Calculate Bone Vector (World Space)
     const startPos = new THREE.Vector3();
     const endPos = new THREE.Vector3();
     bone.getWorldPosition(startPos);
     childBone.getWorldPosition(endPos);
-    
+
     const boneVector = new THREE.Vector3().subVectors(endPos, startPos).normalize();
 
     // Get Local Axes in World Space
@@ -118,17 +118,17 @@ export class SkeletonAuditor {
     }
 
     // Check Constraints
-    const constraint = JOINT_CONSTRAINTS[bone.name];
+    const constraint = getConstraintForBone(bone.name);
     if (constraint) {
-        // If it's a hinge joint (1 DOF), check if the rotation axis is perpendicular to the bone
-        if (constraint.degreesOfFreedom === 1 || boneKey.includes('ForeArm') || boneKey.includes('Leg')) {
-             // Usually X is the hinge axis.
-             // X should be perpendicular to the bone vector (Y).
-             const orthogonality = Math.abs(boneVector.dot(localX));
-             if (orthogonality > 0.1) {
-                 issues.push(`Hinge Axis (X) is not perpendicular to Bone Vector (Dot: ${orthogonality.toFixed(3)}). Rotation will cause spiraling.`);
-             }
+      // If it's a hinge joint (1 DOF), check if the rotation axis is perpendicular to the bone
+      if (constraint.degreesOfFreedom === 1 || boneKey.includes('ForeArm') || boneKey.includes('Leg')) {
+        // Usually X is the hinge axis.
+        // X should be perpendicular to the bone vector (Y).
+        const orthogonality = Math.abs(boneVector.dot(localX));
+        if (orthogonality > 0.1) {
+          issues.push(`Hinge Axis (X) is not perpendicular to Bone Vector (Dot: ${orthogonality.toFixed(3)}). Rotation will cause spiraling.`);
         }
+      }
     }
 
     return {

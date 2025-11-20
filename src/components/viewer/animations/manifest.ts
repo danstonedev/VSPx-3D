@@ -31,7 +31,7 @@ const OVERRIDES: Record<string, Partial<AnimationSpec>> = {
   'Stand.glb': { clipName: 'Stand', speed: 0.5 },
   'LongSit.glb': { clipName: 'LongSit', speed: 0.5 },
   'Sit.glb': { clipName: 'Sit', speed: 0.5 },
-  'Neutral.glb': { clipName: 'Neutral', speed: 0.5, loop: 'once' },
+  'Neutral_Model.glb': { clipName: 'Neutral_Model', speed: 0.5, loop: 'once' },
 }
 
 export const ANIMATIONS: AnimationSpec[] = (filesJson?.files ?? []).map((id: string) => ({
@@ -42,7 +42,7 @@ export const ANIMATIONS: AnimationSpec[] = (filesJson?.files ?? []).map((id: str
   ...(OVERRIDES[id] || {}),
 }))
 
-export const DEFAULT_ANIMATION_ID = 'Neutral.glb'
+export const DEFAULT_ANIMATION_ID = 'Neutral_Model.glb'
 
 /**
  * Format animation ID for display in UI
@@ -67,7 +67,7 @@ export const getAnimationDisplayName = (id: string): string => {
     'LongSit.glb': 'Long Sit',
     'Manny_Kick.glb': 'Kick',
     'Manny_Swim.glb': 'Swim',
-    'Neutral.glb': 'Neutral Position',
+    'Neutral_Model.glb': 'Neutral Position',
   }
 
   return customNames[id] || formatAnimationName(id)

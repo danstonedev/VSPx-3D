@@ -3,11 +3,14 @@
  * 
  * Provides functions to validate and enforce anatomical joint constraints
  * on skeletal bones after IK solving or manual manipulation.
+ * 
+ * REFACTORED: Now uses the single source of truth (joints.ts) instead of legacy jointConstraints.ts.
  */
 
 import * as THREE from 'three';
-import { getConstraintForBone, RotationLimits, JointConstraint, hasConstraint } from './jointConstraints';
-import { relativeToAnatomical } from './angleConversion';
+import { JOINTS, getParentJoint } from '../../../biomech/model/joints';
+import { JointDef } from '../../../biomech/model/types';
+import { getSegmentByBoneName } from '../../../biomech/model/segments';
 import { getNeutralPoseRotation, loadNeutralPose } from './neutralPoseLoader';
 
 export type ConstraintViolation = {
@@ -16,9 +19,53 @@ export type ConstraintViolation = {
   violations: string[];
 };
 
+export interface RotationLimits {
+  x: [number, number];
+  y: [number, number];
+  z: [number, number];
+}
+
 // Legacy T-pose capture (deprecated - use Neutral Position instead)
 const constraintReferencePose = new Map<string, THREE.Quaternion>();
 let useNeutralPoseReference = false;
+
+/**
+ * Helper: Get the JointDef for a given bone name
+ */
+export function getConstraintForBone(boneName: string): JointDef | undefined {
+  const segment = getSegmentByBoneName(boneName);
+  if (!segment) return undefined;
+  return getParentJoint(segment.id);
+}
+
+/**
+ * Helper: Check if a bone has a constraint
+ */
+export function hasConstraint(boneName: string): boolean {
+  return !!getConstraintForBone(boneName);
+}
+
+/**
+ * Helper: Convert JointDef coordinates to RotationLimits format
+ */
+export function getLimitsFromJointDef(joint: JointDef): RotationLimits {
+  // Default to full range
+  const limits: RotationLimits = { 
+    x: [-Math.PI, Math.PI], 
+    y: [-Math.PI, Math.PI], 
+    z: [-Math.PI, Math.PI] 
+  };
+  
+  joint.coordinates.forEach(coord => {
+    const axis = coord.axis.toLowerCase() as 'x' | 'y' | 'z';
+    if (coord.clamped) {
+       limits[axis] = [coord.range.min, coord.range.max];
+    }
+  });
+  
+  return limits;
+}
+
 
 /**
  * Initialize constraint system to use Neutral Position as reference
@@ -30,7 +77,7 @@ export async function initializeNeutralPoseReference(): Promise<void> {
     useNeutralPoseReference = true;
     console.log('✅ Constraint system initialized with Neutral Position reference');
   } catch (error) {
-    console.warn('⚠️ Could not load Neutral.glb for reference. Will use captured pose from first animation load.');
+    console.warn('⚠️ Could not load Neutral_Model.glb for reference. Will use captured pose from first animation load.');
     // Fall back to legacy capture mode
     useNeutralPoseReference = false;
   }
@@ -97,26 +144,16 @@ export function getRelativeEuler(bone: THREE.Bone): THREE.Euler {
  * Get anatomical angles (relative to true anatomical neutral)
  * 
  * Uses the angleConversion module for clear, testable coordinate transformation.
- * Now references Neutral Position (Neutral.glb) as the anatomical zero point.
+ * Now references Neutral Position (Neutral_Model.glb) as the anatomical zero point.
  * 
  * @param bone - The bone to measure
  * @returns Euler angles in anatomical reference frame (in radians)
  */
 export function getAnatomicalEuler(bone: THREE.Bone): THREE.Euler {
   const relativeEuler = getRelativeEuler(bone);
-  const constraint = getConstraintForBone(bone.name);
-  
-  // Check for new tPoseOffset field first, fall back to deprecated anatomicalNeutral
-  const tPoseOffset = constraint?.tPoseOffset || constraint?.anatomicalNeutral;
-  
-  if (!constraint || !tPoseOffset) {
-    // No T-pose offset defined = Neutral Position IS anatomical neutral
-    // Return relative angles directly as anatomical angles
-    return relativeEuler;
-  }
-  
-  // Use angleConversion module for clear transformation
-  return relativeToAnatomical(relativeEuler, tPoseOffset);
+  // In the new system, the Neutral Pose IS the anatomical zero.
+  // So relative rotation from Neutral Pose = Anatomical Angles.
+  return relativeEuler;
 }
 
 export function setRelativeEuler(
@@ -155,7 +192,7 @@ function clamp(value: number, min: number, max: number): number {
  */
 export function validateRotation(
   bone: THREE.Bone,
-  constraint?: JointConstraint,
+  constraint?: JointDef,
   debug: boolean = false
 ): { valid: boolean; clamped: boolean; violations: string[] } {
   // Look up constraint if not provided
@@ -164,16 +201,24 @@ export function validateRotation(
   }
   
   // No constraint defined for this bone - allow any rotation
-  if (!constraint || !constraint.enabled) {
+  if (!constraint) {
     return { valid: true, clamped: false, violations: [] };
   }
   
-  const limits = constraint.rotationLimits;
+  const limits = getLimitsFromJointDef(constraint);
   const violations: string[] = [];
   let clamped = false;
   
   const restQuat = getRestQuaternion(bone);
-  const euler = getRelativeEuler(bone);
+  
+  // Calculate relative quaternion
+  const restInverse = restQuat.clone().invert();
+  const relativeQuat = new THREE.Quaternion().multiplyQuaternions(restInverse, bone.quaternion);
+  
+  // Convert to Euler using the JOINT'S defined order (e.g. ZXY for elbow)
+  // Default to XYZ if not specified (though JointDef usually specifies it)
+  const order = (constraint.eulerOrder || 'XYZ') as THREE.EulerOrder;
+  const euler = new THREE.Euler().setFromQuaternion(relativeQuat, order);
   
   // Store original values
   const originalX = euler.x;
@@ -181,7 +226,7 @@ export function validateRotation(
   const originalZ = euler.z;
   
   if (debug) {
-    console.log(`[validateRotation] ${bone.name}:`,
+    console.log(`[validateRotation] ${bone.name} (${order}):`,
       `X=${(originalX * 180 / Math.PI).toFixed(1)}° [${(limits.x[0] * 180 / Math.PI).toFixed(0)}° to ${(limits.x[1] * 180 / Math.PI).toFixed(0)}°]`,
       `Y=${(originalY * 180 / Math.PI).toFixed(1)}° [${(limits.y[0] * 180 / Math.PI).toFixed(0)}° to ${(limits.y[1] * 180 / Math.PI).toFixed(0)}°]`,
       `Z=${(originalZ * 180 / Math.PI).toFixed(1)}° [${(limits.z[0] * 180 / Math.PI).toFixed(0)}° to ${(limits.z[1] * 180 / Math.PI).toFixed(0)}°]`
@@ -194,15 +239,15 @@ export function validateRotation(
   euler.z = clamp(euler.z, limits.z[0], limits.z[1]);
   
   // Check if any clamping occurred
-  if (euler.x !== originalX) {
+  if (Math.abs(euler.x - originalX) > 1e-5) {
     violations.push(`X: ${originalX.toFixed(3)} → ${euler.x.toFixed(3)}`);
     clamped = true;
   }
-  if (euler.y !== originalY) {
+  if (Math.abs(euler.y - originalY) > 1e-5) {
     violations.push(`Y: ${originalY.toFixed(3)} → ${euler.y.toFixed(3)}`);
     clamped = true;
   }
-  if (euler.z !== originalZ) {
+  if (Math.abs(euler.z - originalZ) > 1e-5) {
     violations.push(`Z: ${originalZ.toFixed(3)} → ${euler.z.toFixed(3)}`);
     clamped = true;
   }
@@ -248,7 +293,7 @@ export function applyConstraints(
     const constraint = getConstraintForBone(bone.name);
     
     if (!constraint) continue;
-    if (onlyEnabled && !constraint.enabled) continue;
+    // Note: JointDef doesn't have 'enabled' flag, assuming all defined joints are enabled
     
     constrainedBones++;
     
@@ -470,14 +515,14 @@ export function getConstraintUtilization(
  * @param bone - The bone to reset
  * @param constraint - Optional constraint (will look up if not provided)
  */
-export function resetToNeutral(bone: THREE.Bone, constraint?: JointConstraint): void {
+export function resetToNeutral(bone: THREE.Bone, constraint?: JointDef): void {
   if (!constraint) {
     constraint = getConstraintForBone(bone.name);
   }
   
   if (!constraint) return;
   
-  const limits = constraint.rotationLimits;
+  const limits = getLimitsFromJointDef(constraint);
   const restQuat = getRestQuaternion(bone);
   
   // Set to middle of each range
@@ -485,7 +530,7 @@ export function resetToNeutral(bone: THREE.Bone, constraint?: JointConstraint): 
     (limits.x[0] + limits.x[1]) / 2,
     (limits.y[0] + limits.y[1]) / 2,
     (limits.z[0] + limits.z[1]) / 2,
-    'XYZ'
+    (constraint.eulerOrder || 'XYZ') as THREE.EulerOrder
   );
   
   const delta = new THREE.Quaternion().setFromEuler(neutralEuler);

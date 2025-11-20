@@ -60,7 +60,7 @@ export class MovementLibrary {
           time: 0,
           joints: {
             rightUpperArm: { rotation: { x: 0, y: 0, z: -1.57 } }, // ~90° shoulder abduction
-            rightLowerArm: { rotation: { x: 0, y: -0.7, z: 0 } }, // ~40° pronation
+            rightLowerArm: { rotation: { x: 0, y: 0, z: 1.57 } }, // ~90° flexion (corrected from Y-axis varus)
             rightHand: { rotation: { x: 0, y: 0, z: 0 } },
           },
         },
@@ -68,7 +68,7 @@ export class MovementLibrary {
           time: 0.25,
           joints: {
             rightUpperArm: { rotation: { x: 0, y: 0, z: -1.57 } },
-            rightLowerArm: { rotation: { x: 0, y: -0.7, z: 0 } },
+            rightLowerArm: { rotation: { x: 0, y: 0, z: 1.57 } },
             rightHand: { rotation: { x: 0, y: 0, z: -0.52 } }, // ~30° wrist flexion
           },
         },
@@ -76,7 +76,7 @@ export class MovementLibrary {
           time: 0.5,
           joints: {
             rightUpperArm: { rotation: { x: 0, y: 0, z: -1.57 } },
-            rightLowerArm: { rotation: { x: 0, y: -0.7, z: 0 } },
+            rightLowerArm: { rotation: { x: 0, y: 0, z: 1.57 } },
             rightHand: { rotation: { x: 0, y: 0, z: 0.52 } }, // ~30° wrist extension
           },
         },
@@ -84,7 +84,7 @@ export class MovementLibrary {
           time: 0.75,
           joints: {
             rightUpperArm: { rotation: { x: 0, y: 0, z: -1.57 } },
-            rightLowerArm: { rotation: { x: 0, y: -0.7, z: 0 } },
+            rightLowerArm: { rotation: { x: 0, y: 0, z: 1.57 } },
             rightHand: { rotation: { x: 0, y: 0, z: -0.52 } },
           },
         },

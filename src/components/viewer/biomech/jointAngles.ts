@@ -407,8 +407,8 @@ export function mapEulerToBiomech(
   } else if (jointId === 'elbow') {
     // ELBOW: Flexion is Z-axis (per corrected joints.ts config)
     flexExt = deg(euler.z);    // Z = flexion/extension
-    abdAdd = deg(euler.x);     // X = varus/valgus (carrying angle)
-    rotation = deg(euler.y);   // Y = pronation/supination
+    abdAdd = deg(euler.y);     // Y = varus/valgus (carrying angle)
+    rotation = deg(euler.x);   // X = pronation/supination
   }
 
   // Apply T-pose offset correction to convert from T-pose to anatomical neutral

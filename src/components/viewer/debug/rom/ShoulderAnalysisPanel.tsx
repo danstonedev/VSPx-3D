@@ -14,7 +14,7 @@ interface ShoulderAnalysisPanelProps {
 export function ShoulderAnalysisPanel({ selectedBone, skeleton, jointCoordinates, biomechState }: ShoulderAnalysisPanelProps) {
   const isShoulderJoint = selectedBone.name === 'mixamorig1RightArm' || selectedBone.name === 'mixamorig1LeftArm';
   if (!isShoulderJoint || !skeleton) return null;
-  
+
   // --------------------------------------------------------------------------
   // STRATEGY 1: Use Biomech Engine Coordinates (Preferred)
   // --------------------------------------------------------------------------
@@ -22,23 +22,23 @@ export function ShoulderAnalysisPanel({ selectedBone, skeleton, jointCoordinates
   if (biomechState && biomechState.isCalibrated()) {
     const side = selectedBone.name.includes('Right') ? 'right' : 'left';
     const prefix = side === 'right' ? 'r' : 'l';
-    
+
     const ghState = biomechState.getJointState(`gh_${side}`);
     const stState = biomechState.getJointState(`st_${side}`);
-    
+
     if (ghState && stState) {
       const rad2deg = 180 / Math.PI;
-      
+
       // Extract GH Coordinates (Radians -> Degrees)
       const ghAbd = (ghState.coordinates[`gh_${prefix}_abduction`]?.value ?? 0) * rad2deg;
       const ghFlex = (ghState.coordinates[`gh_${prefix}_flexion`]?.value ?? 0) * rad2deg;
-      
+
       // Extract ST Coordinates (Radians -> Degrees)
       const stUpward = (stState.coordinates[`st_${prefix}_upward`]?.value ?? 0) * rad2deg;
-      
+
       // Total Abduction (Elevation in Coronal Plane)
       const totalAbduction = Math.abs(ghAbd) + Math.abs(stUpward);
-      
+
       // Plane of Elevation
       const totalElevation = Math.sqrt(ghFlex * ghFlex + ghAbd * ghAbd);
       const planeOfElevation = totalElevation < 5 ? 0 : Math.atan2(ghFlex, ghAbd) * rad2deg;
@@ -47,7 +47,7 @@ export function ShoulderAnalysisPanel({ selectedBone, skeleton, jointCoordinates
       return (
         <div className="shoulder-analysis-advanced">
           <h5>🔬 Advanced Shoulder Analysis (Coordinate System)</h5>
-          
+
           <div className="analysis-grid">
             {/* Scapulohumeral Rhythm */}
             <div className="analysis-section">
@@ -75,7 +75,7 @@ export function ShoulderAnalysisPanel({ selectedBone, skeleton, jointCoordinates
                 </div>
               </div>
             </div>
-            
+
             {/* Plane of Elevation */}
             <div className="analysis-section">
               <h6>✈️ Plane of Elevation</h6>
@@ -99,7 +99,7 @@ export function ShoulderAnalysisPanel({ selectedBone, skeleton, jointCoordinates
               </div>
             </div>
           </div>
-          
+
           <p className="rhythm-note">
             💡 Normal: ~2:1 GH:ST ratio, scapular plane ~30°
           </p>
@@ -122,24 +122,24 @@ export function ShoulderAnalysisPanel({ selectedBone, skeleton, jointCoordinates
     // So this block is redundant if we handle biomechState above.
     // BUT, for testing purposes (where we mock jointCoordinates but not biomechState), we might want to keep it.
     // I'll keep it but be aware it might lack ST data in production if selectedBone is Arm.
-    
+
     const side = selectedBone.name.includes('Right') ? 'right' : 'left';
     const prefix = side === 'right' ? 'r' : 'l';
-    
+
     // Extract GH Coordinates
     const ghAbd = (jointCoordinates[`gh_${prefix}_abduction`] || 0);
     const ghFlex = (jointCoordinates[`gh_${prefix}_flexion`] || 0);
-    
+
     // Extract ST Coordinates
     const stUpward = (jointCoordinates[`st_${prefix}_upward`] || 0);
-    
+
     // If we have ST data, great. If not, it will be 0.
-    
+
     const rad2deg = 180 / Math.PI;
     const ghAbdDeg = ghAbd * rad2deg;
     const ghFlexDeg = ghFlex * rad2deg;
     const stUpwardDeg = stUpward * rad2deg;
-    
+
     const totalAbduction = Math.abs(ghAbdDeg) + Math.abs(stUpwardDeg);
     const totalElevation = Math.sqrt(ghFlexDeg * ghFlexDeg + ghAbdDeg * ghAbdDeg);
     const planeOfElevation = totalElevation < 5 ? 0 : Math.atan2(ghFlexDeg, ghAbdDeg) * rad2deg;
@@ -176,7 +176,7 @@ export function ShoulderAnalysisPanel({ selectedBone, skeleton, jointCoordinates
               </div>
             </div>
           </div>
-          
+
           {/* Plane of Elevation */}
           <div className="analysis-section">
             <h6>✈️ Plane of Elevation</h6>
@@ -200,7 +200,7 @@ export function ShoulderAnalysisPanel({ selectedBone, skeleton, jointCoordinates
             </div>
           </div>
         </div>
-        
+
         <p className="rhythm-note">
           💡 Normal: ~2:1 GH:ST ratio, scapular plane ~30°
         </p>
@@ -220,16 +220,16 @@ export function ShoulderAnalysisPanel({ selectedBone, skeleton, jointCoordinates
   const biomechData = computeBiomechAnglesForSelectedBone(skeleton, selectedBone);
   const compositeData = getCompositeShoulderMotion(selectedBone, skeleton);
   if (!biomechData || !compositeData) return null;
-  
+
   const { flexExt, abdAdd } = biomechData.angles;
   const totalElevation = Math.sqrt(flexExt * flexExt + abdAdd * abdAdd);
   const planeOfElevation = totalElevation < 5 ? 0 : Math.atan2(flexExt, abdAdd) * 180 / Math.PI;
   const planeName = getPlaneName(planeOfElevation * Math.PI / 180);
-  
+
   return (
     <div className="shoulder-analysis-advanced">
       <h5>🔬 Advanced Shoulder Analysis (Visual Estimate)</h5>
-      
+
       <div className="analysis-grid">
         {/* Scapulohumeral Rhythm */}
         <div className="analysis-section">
@@ -257,7 +257,7 @@ export function ShoulderAnalysisPanel({ selectedBone, skeleton, jointCoordinates
             </div>
           </div>
         </div>
-        
+
         {/* Plane of Elevation */}
         <div className="analysis-section">
           <h6>✈️ Plane of Elevation</h6>
@@ -281,7 +281,7 @@ export function ShoulderAnalysisPanel({ selectedBone, skeleton, jointCoordinates
           </div>
         </div>
       </div>
-      
+
       <p className="rhythm-note">
         💡 Normal: ~2:1 GH:ST ratio, scapular plane ~30°
       </p>

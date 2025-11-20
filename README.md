@@ -33,13 +33,14 @@ npm run dev
 
 The app will automatically open at `http://localhost:3000`
 
-If it doesn't open automatically, navigate to: **http://localhost:3000**
+If it doesn't open automatically, navigate to: **<http://localhost:3000>**
 
 ---
 
 ## ✨ Features
 
 ### 🎬 11 Realistic Animations
+
 - **Walk** - Natural walking motion
 - **Stand** - Standing pose
 - **Sit** - Basic sitting position
@@ -50,6 +51,7 @@ If it doesn't open automatically, navigate to: **http://localhost:3000**
 - And more medical/clinical poses!
 
 ### 🎮 Interactive Controls
+
 - **Mouse Controls**:
   - Left click + drag: Rotate the camera
   - Right click + drag: Pan the view
@@ -61,6 +63,7 @@ If it doesn't open automatically, navigate to: **http://localhost:3000**
   - Speed control slider (0.1x - 2.0x)
 
 ### 🎨 Professional Features
+
 - Realistic lighting and shadows
 - Smooth animation transitions
 - Performance-optimized 3D rendering
@@ -101,12 +104,15 @@ VSPx_3D_Viewer_Demo/
 ## 🛠️ Available Scripts
 
 ### `npm run dev`
-Starts the development server at http://localhost:3000
+
+Starts the development server at <http://localhost:3000>
 
 ### `npm run build`
+
 Builds the app for production to the `dist/` folder
 
 ### `npm run preview`
+
 Preview the production build locally
 
 ---
@@ -130,6 +136,7 @@ Preview the production build locally
 ### 3D Models
 
 All models are in GLB format (compressed GLTF):
+
 - Optimized for web delivery
 - Include animations and skeleton data
 - Loaded on-demand for performance
@@ -141,6 +148,7 @@ All models are in GLB format (compressed GLTF):
 ### Change Initial Animation
 
 Edit `App.tsx`:
+
 ```tsx
 <Viewer3D initialAnimation="walk" />  // Change to any animation name
 ```
@@ -149,6 +157,7 @@ Edit `App.tsx`:
 
 1. Place GLB file in `public/models/animations/`
 2. Add to animation list in `Viewer3D.tsx`:
+
 ```tsx
 { name: 'your_animation', label: 'Your Animation' }
 ```
@@ -169,6 +178,7 @@ Edit `App.tsx`:
 **Issue**: 3D model doesn't appear
 
 **Solutions**:
+
 - Check browser console for errors
 - Verify GLB files exist in `public/models/`
 - Clear browser cache and refresh
@@ -178,6 +188,7 @@ Edit `App.tsx`:
 **Issue**: Model loads but doesn't animate
 
 **Solutions**:
+
 - Check animation name matches file name
 - Click Play button if paused
 - Check browser console for errors
@@ -187,6 +198,7 @@ Edit `App.tsx`:
 **Issue**: Low frame rate or stuttering
 
 **Solutions**:
+
 - Close other browser tabs
 - Reduce animation speed
 - Update graphics drivers
@@ -197,6 +209,7 @@ Edit `App.tsx`:
 **Issue**: Port 3000 is already in use
 
 **Solution**:
+
 ```bash
 # Vite will automatically try port 3001, 3002, etc.
 # Or specify a different port:
@@ -218,6 +231,7 @@ This creates an optimized build in the `dist/` folder.
 ### Deploy to Static Hosting
 
 The built app can be deployed to:
+
 - **Vercel**: `vercel deploy`
 - **Netlify**: Drag & drop `dist/` folder
 - **GitHub Pages**: Use gh-pages package
@@ -245,14 +259,17 @@ None required! The app works out of the box.
 ## 🎓 Learning Resources
 
 ### Three.js
+
 - [Three.js Documentation](https://threejs.org/docs/)
 - [Three.js Examples](https://threejs.org/examples/)
 
 ### React Three Fiber
+
 - [Official Docs](https://docs.pmnd.rs/react-three-fiber)
 - [Examples](https://docs.pmnd.rs/react-three-fiber/getting-started/examples)
 
 ### GLTF/GLB Models
+
 - [Mixamo](https://www.mixamo.com/) - Free animated characters
 - [Sketchfab](https://sketchfab.com/) - 3D model marketplace
 
@@ -267,7 +284,8 @@ This demo is extracted from the VSPx project. Ensure you have appropriate rights
 ## 🤝 Contributing
 
 This is a standalone demo. For the full VSPx project:
-- Repository: https://github.com/danstonedev/VSPx.git
+
+- Repository: <https://github.com/danstonedev/VSPx.git>
 - Branch: main
 
 ---
@@ -275,35 +293,41 @@ This is a standalone demo. For the full VSPx project:
 ## 💡 Tips & Tricks
 
 ### Optimize Performance
+
 - Reduce shadow quality in production if needed
 - Use lower poly models for mobile
 - Enable GPU acceleration in browser
 
 ### Add Custom Models
+
 1. Export from Blender as GLB
 2. Place in `public/models/`
 3. Update HumanFigure component path
 
 ### Debug Mode
+
 Open browser DevTools (F12) to see:
+
 - Console logs for animation state
 - Performance metrics
 - WebGL info
 
 ---
 
-## 🎉 You're Ready!
+## 🎉 You're Ready
 
 Your 3D animation viewer is set up and ready to go!
 
-### Next Steps:
+### Next Steps
+
 1. Run `npm install`
 2. Run `npm run dev`
-3. Open http://localhost:3000
+3. Open <http://localhost:3000>
 4. Click "Launch 3D Viewer"
 5. Interact with the 3D model!
 
 ### Need Help?
+
 - Check console for errors
 - Review troubleshooting section
 - Check Three.js/React Three Fiber docs

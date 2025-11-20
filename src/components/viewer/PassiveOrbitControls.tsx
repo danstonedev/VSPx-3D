@@ -31,8 +31,8 @@ export const PassiveOrbitControls = forwardRef<OrbitControlsImpl, React.Componen
           if (type === 'wheel') {
             const normalizedOptions =
               typeof options === 'boolean'
-                ? { capture: options, passive: true }
-                : { passive: true, ...(options ?? {}) }
+                ? { capture: options, passive: false }
+                : { passive: false, ...(options ?? {}) }
             return originalAddEventListener(type, listener, normalizedOptions)
           }
           return originalAddEventListener(type, listener, options as any)

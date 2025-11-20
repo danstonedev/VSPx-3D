@@ -7,8 +7,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import * as THREE from 'three';
-import { getConstraintForBone } from '../constraints/jointConstraints';
-import { getRelativeEuler, type ConstraintViolation } from '../constraints/constraintValidator';
+import { getConstraintForBone, getRelativeEuler, type ConstraintViolation } from '../constraints/constraintValidator';
 import { detectCollisions, type CollisionResult } from '../constraints/selfCollisionDetector';
 import { computeBiomechAnglesForSelectedBone } from '../biomech/jointAngles';
 import type { BiomechState } from '../../../biomech/engine/biomechState';

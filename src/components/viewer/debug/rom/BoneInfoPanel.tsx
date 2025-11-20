@@ -1,11 +1,11 @@
 import React from 'react';
 import * as THREE from 'three';
-import { 
-  getBiomechMovementLabel, 
-  getDisplayAnglesFromBiomech, 
-  getClinicalAngleLimits 
+import {
+  getBiomechMovementLabel,
+  getDisplayAnglesFromBiomech,
+  getClinicalAngleLimits
 } from '../../utils/jointLabels';
-import { getConstraintForBone } from '../../constraints/jointConstraints';
+import { getConstraintForBone, getLimitsFromJointDef } from '../../constraints/constraintValidator';
 import { ShoulderAnalysisPanel } from './ShoulderAnalysisPanel';
 import { ManualControls } from './ManualControls';
 import type { BiomechState } from '../../../../biomech/engine/biomechState';
@@ -26,12 +26,12 @@ interface BoneInfoPanelProps {
 }
 
 function extractBiomechAnglesFromCoordinates(
-  boneName: string, 
+  boneName: string,
   jointCoordinates: Record<string, number>
 ): { flexExt: number; abdAdd: number; rotation: number } | null {
   const segment = getSegmentByBoneName(boneName);
   const joint = segment ? getParentJoint(segment.id) : null;
-  
+
   if (!joint) return null;
 
   let flexExt = 0;
@@ -50,10 +50,10 @@ function extractBiomechAnglesFromCoordinates(
     abdAdd = getVal('Z');
     rotation = getVal('X');
   } else if (boneName.includes('ForeArm')) {
-    // Elbow: Flex=Z, Rot=Y
+    // Elbow: Flex=Z, Rot=X, Varus=Y
     flexExt = getVal('Z');
-    rotation = getVal('Y');
-    abdAdd = 0; // No varus/valgus coordinate usually
+    rotation = getVal('X');
+    abdAdd = getVal('Y');
   } else {
     // Hip, Knee, Ankle: Flex=X, Abd=Z, Rot=Y
     flexExt = getVal('X');
@@ -79,57 +79,56 @@ export function BoneInfoPanel({
   const constraint = getConstraintForBone(selectedBone.name);
   if (!constraint) return null;
 
+  const limits = getLimitsFromJointDef(constraint);
+  const degreesOfFreedom = constraint.coordinates.filter(c => !c.locked).length;
+
   return (
     <div className="bone-info">
       <h4>Selected Joint</h4>
       <p className="bone-name">{selectedBone.name}</p>
-      
+
       <div className="dof-info">
         <span className="label">Degrees of Freedom:</span>
-        <span className="value">{constraint.degreesOfFreedom}</span>
+        <span className="value">{degreesOfFreedom}</span>
       </div>
-      
-      {constraint.notes && (
-        <p className="bone-description">{constraint.notes}</p>
-      )}
-      
+
       {/* Unified Joint Angles Display */}
       {skeleton && (() => {
         // PRIORITY: Use jointCoordinates from BiomechState if available (Coordinate System)
         // FALLBACK: Use computeBiomechAnglesForSelectedBone (Bone System)
-        
+
         let displayAngles: { x: number; y: number; z: number } | null = null;
-        
+
         if (jointCoordinates) {
           const biomechAngles = extractBiomechAnglesFromCoordinates(selectedBone.name, jointCoordinates);
           if (biomechAngles) {
             displayAngles = getDisplayAnglesFromBiomech(selectedBone.name, biomechAngles);
           }
         }
-        
+
         if (!displayAngles && jointAngles) {
-           // Fallback to the prop passed in (which comes from computeBiomechAnglesForSelectedBone)
-           // Note: jointAngles prop is ALREADY processed by getDisplayAnglesFromBiomech in RangeOfMotionPanel
-           displayAngles = jointAngles;
+          // Fallback to the prop passed in (which comes from computeBiomechAnglesForSelectedBone)
+          // Note: jointAngles prop is ALREADY processed by getDisplayAnglesFromBiomech in RangeOfMotionPanel
+          displayAngles = jointAngles;
         }
 
         if (!displayAngles) return null;
-        
+
         return (
           <div className="joint-angles unified">
             <h5>Joint Angles (Anatomical Neutral = 0°)</h5>
             <p className="biomech-note">
               Measured between proximal and distal segments using clinical conventions
             </p>
-            
+
             {(['x', 'y', 'z'] as const).map((axis) => {
               // We don't have the raw anatomical angle here easily if we used jointCoordinates,
               // but we have the display value which is what matters for the badge.
               // For the slider, we need to know the range.
-              
+
               const movementLabel = getBiomechMovementLabel(selectedBone.name, axis);
               const biomechValue = displayAngles![axis];
-              
+
               // Parse movement label for display on left/right sides
               let leftLabel: string, rightLabel: string;
               if (movementLabel.includes('/')) {
@@ -141,11 +140,11 @@ export function BoneInfoPanel({
                 leftLabel = 'NEGATIVE';
                 rightLabel = 'POSITIVE';
               }
-              
+
               // Get limits using helper
               const { min: minAngle, max: maxAngle } = getClinicalAngleLimits(selectedBone.name, axis);
               const anatomicalRange = maxAngle - minAngle;
-              
+
               // Calculate position on scale
               // Note: biomechValue IS the anatomical angle for this axis
               const normalizedPos = ((biomechValue - minAngle) / anatomicalRange) * 100;
@@ -162,7 +161,7 @@ export function BoneInfoPanel({
                   clampedPos < neutralPos ? `${clampedPos}%` : `${neutralPos}%`
                 );
               };
-              
+
               return (
                 <div key={axis} className="angle-row-scale">
                   <div className="movement-header">
@@ -193,44 +192,44 @@ export function BoneInfoPanel({
           </div>
         );
       })()}
-      
-      <ShoulderAnalysisPanel 
-        selectedBone={selectedBone} 
-        skeleton={skeleton} 
+
+      <ShoulderAnalysisPanel
+        selectedBone={selectedBone}
+        skeleton={skeleton}
         jointCoordinates={jointCoordinates}
         biomechState={biomechState}
       />
-      
+
       {/* Rotation Limits - Collapsible */}
       <details className="rotation-limits-section">
         <summary><h5>Rotation Limits</h5></summary>
         <div className="limit-row">
           <span className="axis">{getBiomechMovementLabel(selectedBone.name, 'x')}:</span>
           <span className="range">
-            {THREE.MathUtils.radToDeg(constraint.rotationLimits.x[0]).toFixed(0)}° 
-            to 
-            {THREE.MathUtils.radToDeg(constraint.rotationLimits.x[1]).toFixed(0)}°
+            {THREE.MathUtils.radToDeg(limits.x[0]).toFixed(0)}°
+            to
+            {THREE.MathUtils.radToDeg(limits.x[1]).toFixed(0)}°
           </span>
         </div>
         <div className="limit-row">
           <span className="axis">{getBiomechMovementLabel(selectedBone.name, 'y')}:</span>
           <span className="range">
-            {THREE.MathUtils.radToDeg(constraint.rotationLimits.y[0]).toFixed(0)}° 
-            to 
-            {THREE.MathUtils.radToDeg(constraint.rotationLimits.y[1]).toFixed(0)}°
+            {THREE.MathUtils.radToDeg(limits.y[0]).toFixed(0)}°
+            to
+            {THREE.MathUtils.radToDeg(limits.y[1]).toFixed(0)}°
           </span>
         </div>
         <div className="limit-row">
           <span className="axis">{getBiomechMovementLabel(selectedBone.name, 'z')}:</span>
           <span className="range">
-            {THREE.MathUtils.radToDeg(constraint.rotationLimits.z[0]).toFixed(0)}° 
-            to 
-            {THREE.MathUtils.radToDeg(constraint.rotationLimits.z[1]).toFixed(0)}°
+            {THREE.MathUtils.radToDeg(limits.z[0]).toFixed(0)}°
+            to
+            {THREE.MathUtils.radToDeg(limits.z[1]).toFixed(0)}°
           </span>
         </div>
       </details>
 
-      <ManualControls 
+      <ManualControls
         selectedBone={selectedBone}
         skeleton={skeleton}
         biomechState={biomechState}

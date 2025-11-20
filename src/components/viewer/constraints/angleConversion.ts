@@ -4,7 +4,7 @@
  * Provides clear, testable conversion between different angle reference frames.
  * 
  * REFERENCE FRAMES:
- * 1. Neutral Position Space: Anatomical reference pose from Neutral.glb (arms at sides, legs vertical)
+ * 1. Neutral Position Space: Anatomical reference pose from Neutral_Model.glb (arms at sides, legs vertical)
  * 2. Relative Space: Rotation FROM Neutral Position (0° = at Neutral Position)
  * 3. Anatomical Space: Clinical reference (same as Neutral Position - 0° = anatomical neutral)
  * 

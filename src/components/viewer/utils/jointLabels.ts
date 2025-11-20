@@ -198,9 +198,9 @@ export function getBiomechMovementLabel(boneName: string, axis: 'x' | 'y' | 'z')
   
   if (boneName.includes('ForeArm')) {
     // Elbow/Forearm
-    if (axis === 'x') return 'FLEX/EXT';              // Primary elbow motion
-    if (axis === 'y') return 'PRONATION/SUPINATION';  // Forearm rotation
-    return 'VARUS/VALGUS';                             // Carrying angle deviation
+    if (axis === 'x') return 'PRONATION/SUPINATION';  // X = Pronation (Long axis)
+    if (axis === 'y') return 'VARUS/VALGUS';          // Y = Varus/Valgus (Deviation)
+    return 'FLEX/EXT';                                // Z = Flexion (Hinge)
   }
   
   if (boneName.includes('Leg') && !boneName.includes('UpLeg')) {
@@ -241,11 +241,11 @@ export function getDisplayAnglesFromBiomech(
   biomechAngles: { flexExt: number; abdAdd: number; rotation: number }
 ): { x: number; y: number; z: number } {
   if (boneName.includes('ForeArm')) {
-    // Elbow has different axis mapping
+    // Elbow has different axis mapping (Z=Flex, X=Pron, Y=Varus)
     return {
-      x: biomechAngles.flexExt,      // FLEX/EXT (primary elbow motion)
-      y: biomechAngles.rotation,     // PRONATION/SUPINATION
-      z: biomechAngles.abdAdd        // VARUS/VALGUS (carrying angle)
+      x: biomechAngles.rotation,     // PRONATION/SUPINATION
+      y: biomechAngles.abdAdd,       // VARUS/VALGUS (carrying angle)
+      z: biomechAngles.flexExt       // FLEX/EXT (primary elbow motion)
     };
   } else if (boneName.includes('Arm') && !boneName.includes('ForeArm')) {
     // Shoulder/Humerus - Updated mapping for ZXY order
@@ -294,9 +294,9 @@ export function getClinicalAngleLimits(boneName: string, axis: 'x' | 'y' | 'z'):
     if (axis === 'z') { minAngle = -30; maxAngle = 120; }  // FLEX 0-120°, EXT 0-30°
   } else if (boneName.includes('ForeArm')) {
     // Elbow/Forearm - AAOS clinical ROM standards
-    if (axis === 'x') { minAngle = 0; maxAngle = 150; }    // FLEX 0-150°
-    if (axis === 'y') { minAngle = -80; maxAngle = 80; }   // PRON -80° to SUP +80°
-    if (axis === 'z') { minAngle = -15; maxAngle = 15; }   // VARUS/VALGUS carrying angle ±15°
+    if (axis === 'x') { minAngle = -80; maxAngle = 80; }   // PRON -80° to SUP +80°
+    if (axis === 'y') { minAngle = -15; maxAngle = 15; }   // VARUS/VALGUS carrying angle ±15°
+    if (axis === 'z') { minAngle = 0; maxAngle = 150; }    // FLEX 0-150°
   } else if (boneName.includes('Leg') && !boneName.includes('UpLeg')) {
     // Knee/Tibia - AAOS clinical ROM standards
     if (axis === 'x') { minAngle = -10; maxAngle = 10; }   // VARUS/VALGUS deviation ±10°
