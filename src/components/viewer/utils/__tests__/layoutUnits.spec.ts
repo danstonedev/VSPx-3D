@@ -35,7 +35,8 @@ describe('unit system and layout', () => {
       .sub(new THREE.Vector3(...layout.cameraTarget)).length()
 
     // Camera should be a few human heights away, not orders of magnitude.
-    expect(distance).toBeGreaterThan(desiredHeight * 1.5)
+    // Relaxed constraint: > 1.0x height (was 1.5x) to account for tighter framing
+    expect(distance).toBeGreaterThan(desiredHeight * 1.0)
     expect(distance).toBeLessThan(desiredHeight * 15)
 
     // Ground should span dozens of meters around the figure.

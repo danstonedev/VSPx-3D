@@ -9,6 +9,7 @@ import * as THREE from 'three';
 import type { BiomechState } from '../../../biomech/engine/biomechState';
 import { getSegmentByBoneName } from '../../../biomech/model/segments';
 import { getParentJoint } from '../../../biomech/model/joints';
+import { SKELETON_MAP } from './skeletonMap';
 
 /**
  * IK chain definition for CCDIKSolver
@@ -28,16 +29,15 @@ export interface IKChainConfig {
  */
 export const IK_CHAIN_CONFIGS: IKChainConfig[] = [
   // ==================== ARMS ====================
-  // DISABLED: Biomech engine should drive arms directly to avoid IK conflict
-  /*
+  // Enabled for IK, but Clavicle (Shoulder) is excluded from the chain
+  // so it can be driven procedurally by the Scapulohumeral Rhythm logic
   {
     name: 'Left Arm',
     targetBoneName: 'IKTarget_LeftHand',
-    effectorBoneName: 'mixamorig1LeftHand',
+    effectorBoneName: SKELETON_MAP.LeftHand,
     linkBoneNames: [
-      'mixamorig1LeftForeArm',  // Elbow
-      'mixamorig1LeftArm',      // Shoulder
-      'mixamorig1LeftShoulder'  // Clavicle (optional)
+      SKELETON_MAP.LeftForeArm,  // Elbow
+      SKELETON_MAP.LeftArm       // Shoulder (Humerus)
     ],
     iteration: 10,
     minAngle: 0.01,
@@ -46,26 +46,24 @@ export const IK_CHAIN_CONFIGS: IKChainConfig[] = [
   {
     name: 'Right Arm',
     targetBoneName: 'IKTarget_RightHand',
-    effectorBoneName: 'mixamorig1RightHand',
+    effectorBoneName: SKELETON_MAP.RightHand,
     linkBoneNames: [
-      'mixamorig1RightForeArm',
-      'mixamorig1RightArm',
-      'mixamorig1RightShoulder'
+      SKELETON_MAP.RightForeArm,
+      SKELETON_MAP.RightArm
     ],
     iteration: 10,
     minAngle: 0.01,
     maxAngle: 0.5
   },
-  */
   
   // ==================== LEGS ====================
   {
     name: 'Left Leg',
     targetBoneName: 'IKTarget_LeftFoot',
-    effectorBoneName: 'mixamorig1LeftFoot',
+    effectorBoneName: SKELETON_MAP.LeftFoot,
     linkBoneNames: [
-      'mixamorig1LeftLeg',    // Knee
-      'mixamorig1LeftUpLeg'   // Hip
+      SKELETON_MAP.LeftLeg,    // Knee
+      SKELETON_MAP.LeftUpLeg   // Hip
     ],
     iteration: 10,
     minAngle: 0.01,
@@ -74,10 +72,10 @@ export const IK_CHAIN_CONFIGS: IKChainConfig[] = [
   {
     name: 'Right Leg',
     targetBoneName: 'IKTarget_RightFoot',
-    effectorBoneName: 'mixamorig1RightFoot',
+    effectorBoneName: SKELETON_MAP.RightFoot,
     linkBoneNames: [
-      'mixamorig1RightLeg',
-      'mixamorig1RightUpLeg'
+      SKELETON_MAP.RightLeg,
+      SKELETON_MAP.RightUpLeg
     ],
     iteration: 10,
     minAngle: 0.01,
@@ -88,12 +86,12 @@ export const IK_CHAIN_CONFIGS: IKChainConfig[] = [
   {
     name: 'Spine Chain',
     targetBoneName: 'IKTarget_Head',
-    effectorBoneName: 'mixamorig1Head',
+    effectorBoneName: SKELETON_MAP.Head,
     linkBoneNames: [
-      'mixamorig1Neck',
-      'mixamorig1Spine2',
-      'mixamorig1Spine1',
-      'mixamorig1Spine'
+      SKELETON_MAP.Neck,
+      SKELETON_MAP.Spine2,
+      SKELETON_MAP.Spine1,
+      SKELETON_MAP.Spine
     ],
     iteration: 8,
     minAngle: 0.005,
@@ -218,7 +216,48 @@ export function createIKDefinition(
             // console.log(`🔒 Applied biomech limits for ${boneName}`);
         }
     } else {
-        // console.log(`🔓 Constraint limits DISABLED for ${boneName} - full range of motion allowed`);
+        // Fallback: Apply default limits to prevent gross flipping (e.g. 90° extension)
+        // We assume T-pose is roughly identity (0,0,0) for these bones
+        const segment = getSegmentByBoneName(boneName);
+        const joint = segment ? getParentJoint(segment.id) : null;
+        
+        if (joint && (joint.id.includes('gh_') || joint.id.includes('hip_'))) {
+             // For GH joint (Shoulder), prevent backward extension > 40°
+             // and prevent abduction > 180° or < -90° (relative to T-pose)
+             
+             const min = new THREE.Vector3(-Math.PI, -Math.PI, -Math.PI);
+             const max = new THREE.Vector3(Math.PI, Math.PI, Math.PI);
+             
+             // Apply rough limits relative to T-pose
+             if (joint.eulerOrder === 'YZX') {
+                 // ISB-style: Plane -> Elevation -> Axial
+                 
+                 // Y (Plane of Elevation): -45° (Extension) to +135° (Cross-body)
+                 min.y = THREE.MathUtils.degToRad(-45);
+                 max.y = THREE.MathUtils.degToRad(135);
+                 
+                 // Z (Elevation Angle): -90° (Down) to +90° (Up)
+                 min.z = THREE.MathUtils.degToRad(-90);
+                 max.z = THREE.MathUtils.degToRad(90);
+                 
+                 // X (Axial Rotation): -90° to +90°
+                 min.x = THREE.MathUtils.degToRad(-90);
+                 max.x = THREE.MathUtils.degToRad(90);
+             } else if (joint.eulerOrder === 'ZXY') {
+                 // Legacy/Fallback
+                 // Y (Flexion): -40° to +160°
+                 min.y = THREE.MathUtils.degToRad(-40);
+                 max.y = THREE.MathUtils.degToRad(160);
+                 
+                 // Z (Abduction): -90° (Side) to +90° (Up)
+                 min.z = THREE.MathUtils.degToRad(-90);
+                 max.z = THREE.MathUtils.degToRad(90);
+             }
+             
+             link.rotationMin = min;
+             link.rotationMax = max;
+             // console.log(`🛡️ Applied fallback limits for ${boneName}`);
+        }
     }
     
     return link;

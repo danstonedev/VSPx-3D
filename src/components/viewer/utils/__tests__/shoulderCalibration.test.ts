@@ -19,6 +19,7 @@ import {
   analyzeShoulderKinematics,
   calculateScapulohumeralRhythm 
 } from '../../constraints/shoulderKinematics';
+import { SKELETON_MAP } from '../../utils/skeletonMap';
 
 describe('Shoulder Kinematics QA Calibration', () => {
   
@@ -31,7 +32,7 @@ describe('Shoulder Kinematics QA Calibration', () => {
     isRightSide: boolean
   ): THREE.Bone {
     const bone = new THREE.Bone();
-    bone.name = isRightSide ? 'mixamorig1RightArm' : 'mixamorig1LeftArm';
+    bone.name = isRightSide ? SKELETON_MAP.RightArm : SKELETON_MAP.LeftArm;
     
     // Set position
     bone.position.copy(position);

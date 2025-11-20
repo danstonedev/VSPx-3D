@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import * as THREE from 'three'
-import { playAction, setPaused } from '../../../v2/mixer'
-import { ANIMATIONS } from '../../../v2/manifest'
+import { playAction, setPaused } from '../utils/mixerController'
+import { ANIMATIONS } from '../animations/manifest'
 
 // Minimal action stub implementing used API
 function makeAction() {

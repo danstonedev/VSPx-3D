@@ -13,6 +13,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { JOINT_CONSTRAINTS } from '../jointConstraints';
+import { SKELETON_MAP } from '../../utils/skeletonMap';
 
 const deg = (degrees: number): number => (degrees * Math.PI) / 180;
 const rad = (radians: number): number => (radians * 180) / Math.PI;
@@ -20,11 +21,11 @@ const rad = (radians: number): number => (radians * 180) / Math.PI;
 describe('Elbow Biomechanics', () => {
   describe('Joint Constraint Configuration', () => {
     describe('Left Elbow', () => {
-      const leftElbow = JOINT_CONSTRAINTS['mixamorig1LeftForeArm'];
+      const leftElbow = JOINT_CONSTRAINTS[SKELETON_MAP.LeftForeArm];
 
       it('should exist and be properly configured', () => {
         expect(leftElbow).toBeDefined();
-        expect(leftElbow.boneName).toBe('mixamorig1LeftForeArm');
+        expect(leftElbow.boneName).toBe(SKELETON_MAP.LeftForeArm);
         expect(leftElbow.displayName).toBe('Left Elbow');
         expect(leftElbow.enabled).toBe(true);
         expect(leftElbow.translationLock).toBe(true);
@@ -138,18 +139,18 @@ describe('Elbow Biomechanics', () => {
     });
 
     describe('Right Elbow', () => {
-      const rightElbow = JOINT_CONSTRAINTS['mixamorig1RightForeArm'];
+      const rightElbow = JOINT_CONSTRAINTS[SKELETON_MAP.RightForeArm];
 
       it('should exist and be properly configured', () => {
         expect(rightElbow).toBeDefined();
-        expect(rightElbow.boneName).toBe('mixamorig1RightForeArm');
+        expect(rightElbow.boneName).toBe(SKELETON_MAP.RightForeArm);
         expect(rightElbow.displayName).toBe('Right Elbow');
         expect(rightElbow.enabled).toBe(true);
         expect(rightElbow.translationLock).toBe(true);
       });
 
       it('should have identical ROM ranges to left elbow', () => {
-        const leftElbow = JOINT_CONSTRAINTS['mixamorig1LeftForeArm'];
+        const leftElbow = JOINT_CONSTRAINTS[SKELETON_MAP.LeftForeArm];
         
         expect(rad(rightElbow.rotationLimits.x[0])).toBeCloseTo(rad(leftElbow.rotationLimits.x[0]), 1);
         expect(rad(rightElbow.rotationLimits.x[1])).toBeCloseTo(rad(leftElbow.rotationLimits.x[1]), 1);
@@ -170,7 +171,7 @@ describe('Elbow Biomechanics', () => {
     };
 
     it('should match display expectations for flexion/extension', () => {
-      const leftElbow = JOINT_CONSTRAINTS['mixamorig1LeftForeArm'];
+      const leftElbow = JOINT_CONSTRAINTS[SKELETON_MAP.LeftForeArm];
       const [min, max] = leftElbow.rotationLimits.x;
       
       // Constraint should encompass the display range
@@ -179,7 +180,7 @@ describe('Elbow Biomechanics', () => {
     });
 
     it('should match display expectations for pronation/supination', () => {
-      const leftElbow = JOINT_CONSTRAINTS['mixamorig1LeftForeArm'];
+      const leftElbow = JOINT_CONSTRAINTS[SKELETON_MAP.LeftForeArm];
       const [min, max] = leftElbow.rotationLimits.y;
       
       // Constraint should encompass the display range
@@ -188,7 +189,7 @@ describe('Elbow Biomechanics', () => {
     });
 
     it('should match display expectations for varus/valgus', () => {
-      const leftElbow = JOINT_CONSTRAINTS['mixamorig1LeftForeArm'];
+      const leftElbow = JOINT_CONSTRAINTS[SKELETON_MAP.LeftForeArm];
       const [min, max] = leftElbow.rotationLimits.z;
       
       // Constraint should match the display range
@@ -200,7 +201,7 @@ describe('Elbow Biomechanics', () => {
   describe('Clinical ROM Standards Compliance', () => {
     describe('AAOS Standards', () => {
       it('should meet flexion requirements (145-150°)', () => {
-        const leftElbow = JOINT_CONSTRAINTS['mixamorig1LeftForeArm'];
+        const leftElbow = JOINT_CONSTRAINTS[SKELETON_MAP.LeftForeArm];
         const [, max] = leftElbow.rotationLimits.x;
         const maxFlexion = rad(max);
         
@@ -209,7 +210,7 @@ describe('Elbow Biomechanics', () => {
       });
 
       it('should allow extension to 0° with optional hyperextension', () => {
-        const leftElbow = JOINT_CONSTRAINTS['mixamorig1LeftForeArm'];
+        const leftElbow = JOINT_CONSTRAINTS[SKELETON_MAP.LeftForeArm];
         const [min] = leftElbow.rotationLimits.x;
         const hyperextension = Math.abs(rad(min));
         
@@ -219,7 +220,7 @@ describe('Elbow Biomechanics', () => {
       });
 
       it('should meet pronation/supination requirements (80-90° each)', () => {
-        const leftElbow = JOINT_CONSTRAINTS['mixamorig1LeftForeArm'];
+        const leftElbow = JOINT_CONSTRAINTS[SKELETON_MAP.LeftForeArm];
         const [min, max] = leftElbow.rotationLimits.y;
         
         expect(Math.abs(rad(min))).toBeGreaterThanOrEqual(80);
@@ -229,14 +230,14 @@ describe('Elbow Biomechanics', () => {
 
     describe('Norkin & White Standards', () => {
       it('should allow 0-150° flexion arc', () => {
-        const leftElbow = JOINT_CONSTRAINTS['mixamorig1LeftForeArm'];
+        const leftElbow = JOINT_CONSTRAINTS[SKELETON_MAP.LeftForeArm];
         const [, max] = leftElbow.rotationLimits.x;
         
         expect(rad(max)).toBeCloseTo(150, 1);
       });
 
       it('should allow 80° pronation and 80° supination', () => {
-        const leftElbow = JOINT_CONSTRAINTS['mixamorig1LeftForeArm'];
+        const leftElbow = JOINT_CONSTRAINTS[SKELETON_MAP.LeftForeArm];
         const [min, max] = leftElbow.rotationLimits.y;
         
         expect(Math.abs(rad(min))).toBeGreaterThanOrEqual(80);
@@ -246,7 +247,7 @@ describe('Elbow Biomechanics', () => {
   });
 
   describe('Functional Movement Tests', () => {
-    const leftElbow = JOINT_CONSTRAINTS['mixamorig1LeftForeArm'];
+    const leftElbow = JOINT_CONSTRAINTS[SKELETON_MAP.LeftForeArm];
 
     it('should allow activities of daily living (ADL) arc (30-130° flexion)', () => {
       const [min, max] = leftElbow.rotationLimits.x;
@@ -291,7 +292,7 @@ describe('Elbow Biomechanics', () => {
 
   describe('Anatomical Correctness', () => {
     it('should recognize elbow as a hinge joint (not ball-and-socket)', () => {
-      const leftElbow = JOINT_CONSTRAINTS['mixamorig1LeftForeArm'];
+      const leftElbow = JOINT_CONSTRAINTS[SKELETON_MAP.LeftForeArm];
       
       // Hinge joints have 1-2 DOF, not 3
       expect(leftElbow.degreesOfFreedom).toBeLessThan(3);
@@ -299,7 +300,7 @@ describe('Elbow Biomechanics', () => {
     });
 
     it('should have primary motion (flexion) much larger than secondary motions', () => {
-      const leftElbow = JOINT_CONSTRAINTS['mixamorig1LeftForeArm'];
+      const leftElbow = JOINT_CONSTRAINTS[SKELETON_MAP.LeftForeArm];
       
       const [minX, maxX] = leftElbow.rotationLimits.x;
       const [minY, maxY] = leftElbow.rotationLimits.y;
@@ -317,7 +318,7 @@ describe('Elbow Biomechanics', () => {
     });
 
     it('should have minimal varus/valgus ROM (indicates ligament stability)', () => {
-      const leftElbow = JOINT_CONSTRAINTS['mixamorig1LeftForeArm'];
+      const leftElbow = JOINT_CONSTRAINTS[SKELETON_MAP.LeftForeArm];
       const [minZ, maxZ] = leftElbow.rotationLimits.z;
       
       const varusValgusRange = rad(maxZ) - rad(minZ);
@@ -327,7 +328,7 @@ describe('Elbow Biomechanics', () => {
     });
 
     it('should not confuse flexion with supination', () => {
-      const leftElbow = JOINT_CONSTRAINTS['mixamorig1LeftForeArm'];
+      const leftElbow = JOINT_CONSTRAINTS[SKELETON_MAP.LeftForeArm];
       
       // Flexion is on X-axis, supination is on Y-axis
       // They should be on different axes
@@ -342,7 +343,7 @@ describe('Elbow Biomechanics', () => {
 
   describe('Sign Convention Consistency', () => {
     it('should use consistent positive direction for flexion', () => {
-      const leftElbow = JOINT_CONSTRAINTS['mixamorig1LeftForeArm'];
+      const leftElbow = JOINT_CONSTRAINTS[SKELETON_MAP.LeftForeArm];
       const [min, max] = leftElbow.rotationLimits.x;
       
       // Max (flexion) should be much larger positive than min (extension)
@@ -351,7 +352,7 @@ describe('Elbow Biomechanics', () => {
     });
 
     it('should use anatomical convention for pronation/supination', () => {
-      const leftElbow = JOINT_CONSTRAINTS['mixamorig1LeftForeArm'];
+      const leftElbow = JOINT_CONSTRAINTS[SKELETON_MAP.LeftForeArm];
       const [min, max] = leftElbow.rotationLimits.y;
       
       // Pronation = negative (palm down)
@@ -361,8 +362,8 @@ describe('Elbow Biomechanics', () => {
     });
 
     it('should be symmetric for bilateral joint pairs', () => {
-      const leftElbow = JOINT_CONSTRAINTS['mixamorig1LeftForeArm'];
-      const rightElbow = JOINT_CONSTRAINTS['mixamorig1RightForeArm'];
+      const leftElbow = JOINT_CONSTRAINTS[SKELETON_MAP.LeftForeArm];
+      const rightElbow = JOINT_CONSTRAINTS[SKELETON_MAP.RightForeArm];
       
       // Left and right should have identical ROM ranges
       expect(leftElbow.rotationLimits.x).toEqual(rightElbow.rotationLimits.x);
@@ -373,7 +374,7 @@ describe('Elbow Biomechanics', () => {
 
   describe('Edge Cases and Safety', () => {
     it('should not allow negative flexion beyond hyperextension limits', () => {
-      const leftElbow = JOINT_CONSTRAINTS['mixamorig1LeftForeArm'];
+      const leftElbow = JOINT_CONSTRAINTS[SKELETON_MAP.LeftForeArm];
       const [min] = leftElbow.rotationLimits.x;
       
       // Hyperextension should be limited to prevent injury
@@ -381,21 +382,21 @@ describe('Elbow Biomechanics', () => {
     });
 
     it('should not allow excessive pronation (prevents forearm injury)', () => {
-      const leftElbow = JOINT_CONSTRAINTS['mixamorig1LeftForeArm'];
+      const leftElbow = JOINT_CONSTRAINTS[SKELETON_MAP.LeftForeArm];
       const [min] = leftElbow.rotationLimits.y;
       
       expect(Math.abs(rad(min))).toBeLessThanOrEqual(90);
     });
 
     it('should not allow excessive supination (prevents forearm injury)', () => {
-      const leftElbow = JOINT_CONSTRAINTS['mixamorig1LeftForeArm'];
+      const leftElbow = JOINT_CONSTRAINTS[SKELETON_MAP.LeftForeArm];
       const [, max] = leftElbow.rotationLimits.y;
       
       expect(rad(max)).toBeLessThanOrEqual(90);
     });
 
     it('should not allow excessive varus/valgus (indicates ligament failure)', () => {
-      const leftElbow = JOINT_CONSTRAINTS['mixamorig1LeftForeArm'];
+      const leftElbow = JOINT_CONSTRAINTS[SKELETON_MAP.LeftForeArm];
       const [min, max] = leftElbow.rotationLimits.z;
       
       // >20° varus/valgus suggests ligament damage
@@ -406,7 +407,7 @@ describe('Elbow Biomechanics', () => {
 
   describe('Integration with Display System', () => {
     it('should have constraint ranges that encompass or match display ranges', () => {
-      const leftElbow = JOINT_CONSTRAINTS['mixamorig1LeftForeArm'];
+      const leftElbow = JOINT_CONSTRAINTS[SKELETON_MAP.LeftForeArm];
       
       // X-axis: Display shows 0-150°, constraints should allow this
       const [minX, maxX] = leftElbow.rotationLimits.x;
@@ -425,7 +426,7 @@ describe('Elbow Biomechanics', () => {
     });
 
     it('should not have constraint limits that prevent reaching display boundaries', () => {
-      const leftElbow = JOINT_CONSTRAINTS['mixamorig1LeftForeArm'];
+      const leftElbow = JOINT_CONSTRAINTS[SKELETON_MAP.LeftForeArm];
       const [minX, maxX] = leftElbow.rotationLimits.x;
       const [minY, maxY] = leftElbow.rotationLimits.y;
       const [minZ, maxZ] = leftElbow.rotationLimits.z;
@@ -439,7 +440,7 @@ describe('Elbow Biomechanics', () => {
 
   describe('Documentation and Metadata', () => {
     it('should have comprehensive notes explaining ROM', () => {
-      const leftElbow = JOINT_CONSTRAINTS['mixamorig1LeftForeArm'];
+      const leftElbow = JOINT_CONSTRAINTS[SKELETON_MAP.LeftForeArm];
       
       expect(leftElbow.notes).toBeDefined();
       expect(leftElbow.notes).toContain('FLEX');
@@ -448,13 +449,13 @@ describe('Elbow Biomechanics', () => {
     });
 
     it('should reference clinical standards in notes', () => {
-      const leftElbow = JOINT_CONSTRAINTS['mixamorig1LeftForeArm'];
+      const leftElbow = JOINT_CONSTRAINTS[SKELETON_MAP.LeftForeArm];
       
       expect(leftElbow.notes).toMatch(/AAOS|Norkin|clinical/i);
     });
 
     it('should document degrees of freedom', () => {
-      const leftElbow = JOINT_CONSTRAINTS['mixamorig1LeftForeArm'];
+      const leftElbow = JOINT_CONSTRAINTS[SKELETON_MAP.LeftForeArm];
       
       expect(leftElbow.degreesOfFreedom).toBe(2);
     });

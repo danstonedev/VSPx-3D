@@ -31,7 +31,6 @@ const OVERRIDES: Record<string, Partial<AnimationSpec>> = {
   'Stand.glb': { clipName: 'Stand', speed: 0.5 },
   'LongSit.glb': { clipName: 'LongSit', speed: 0.5 },
   'Sit.glb': { clipName: 'Sit', speed: 0.5 },
-  'A-Position.glb': { clipName: 'A-Position', speed: 0.5, loop: 'once' },
   'Neutral.glb': { clipName: 'Neutral', speed: 0.5, loop: 'once' },
 }
 
@@ -68,7 +67,6 @@ export const getAnimationDisplayName = (id: string): string => {
     'LongSit.glb': 'Long Sit',
     'Manny_Kick.glb': 'Kick',
     'Manny_Swim.glb': 'Swim',
-    'A-Position.glb': 'A-Position (Anatomic)',
     'Neutral.glb': 'Neutral Position',
   }
 

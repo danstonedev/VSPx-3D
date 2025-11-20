@@ -74,38 +74,37 @@ export const JOINTS: Record<string, JointDef> = {
     parentSegment: 'scapula_right',
     childSegment: 'humerus_right',
     type: 'ball',
-    eulerOrder: 'ZXY', // Updated to ZXY to avoid gimbal lock at rest
+    eulerOrder: 'YZX', // ISB-style: Plane -> Elevation -> Axial
     side: 'right',
     coordinates: [
       {
-        id: 'gh_r_abduction',
+        id: 'gh_r_plane',
         jointId: 'gh_right',
-        displayName: 'GH Abduction/Adduction',
-        axis: 'Z', // Z-axis for Abduction (Elevation)
-        index: 2,
-        neutral: 0,
-        range: { min: -90 * DEG_TO_RAD, max: 90 * DEG_TO_RAD },
-        clamped: true,
-        locked: false,
-        invert: true, // Down is negative
-      },
-      {
-        id: 'gh_r_flexion',
-        jointId: 'gh_right',
-        displayName: 'GH Flexion/Extension',
-        axis: 'Y', // Y-axis for Flexion (moves with arm)
+        displayName: 'GH Plane of Elevation',
+        axis: 'Y', // Y-axis sets the plane (0=Abduction, 90=Flexion)
         index: 1,
         neutral: 0,
-        range: { min: -40 * DEG_TO_RAD, max: 160 * DEG_TO_RAD },
+        range: { min: -45 * DEG_TO_RAD, max: 135 * DEG_TO_RAD },
         clamped: true,
         locked: false,
-        invert: false,
+      },
+      {
+        id: 'gh_r_elevation',
+        jointId: 'gh_right',
+        displayName: 'GH Elevation',
+        axis: 'Z', // Z-axis lifts the arm within the plane
+        index: 2,
+        neutral: 0,
+        range: { min: -90 * DEG_TO_RAD, max: 90 * DEG_TO_RAD }, // -90=Down, 0=Horizontal, 90=Up (approx)
+        clamped: true,
+        locked: false,
+        invert: true, // +Z is Down for Right Arm, so invert for Up
       },
       {
         id: 'gh_r_rotation',
         jointId: 'gh_right',
-        displayName: 'GH Axial Rotation (IR/ER)',
-        axis: 'X', // X-axis for Axial Rotation (Long axis)
+        displayName: 'GH Axial Rotation',
+        axis: 'X', // X-axis is long axis
         index: 0,
         neutral: 0,
         range: { min: -90 * DEG_TO_RAD, max: 90 * DEG_TO_RAD },
@@ -170,38 +169,38 @@ export const JOINTS: Record<string, JointDef> = {
     parentSegment: 'scapula_left',
     childSegment: 'humerus_left',
     type: 'ball',
-    eulerOrder: 'ZXY', // Updated to ZXY
+    eulerOrder: 'YZX', // ISB-style: Plane -> Elevation -> Axial
     side: 'left',
     coordinates: [
       {
-        id: 'gh_l_abduction',
+        id: 'gh_l_plane',
         jointId: 'gh_left',
-        displayName: 'GH Abduction/Adduction',
-        axis: 'Z', // Z-axis for Abduction
-        index: 2,
+        displayName: 'GH Plane of Elevation',
+        axis: 'Y', // Y-axis sets the plane
+        index: 1,
         neutral: 0,
-        range: { min: -90 * DEG_TO_RAD, max: 90 * DEG_TO_RAD },
+        range: { min: -135 * DEG_TO_RAD, max: 45 * DEG_TO_RAD }, // Signs flipped for Left
         clamped: true,
         locked: false,
         invert: true,
       },
       {
-        id: 'gh_l_flexion',
+        id: 'gh_l_elevation',
         jointId: 'gh_left',
-        displayName: 'GH Flexion/Extension',
-        axis: 'Y', // Y-axis for Flexion
-        index: 1,
+        displayName: 'GH Elevation',
+        axis: 'Z', // Z-axis lifts the arm
+        index: 2,
         neutral: 0,
-        range: { min: -40 * DEG_TO_RAD, max: 160 * DEG_TO_RAD },
+        range: { min: -90 * DEG_TO_RAD, max: 90 * DEG_TO_RAD },
         clamped: true,
         locked: false,
-        invert: false,
+        invert: false, // Check sign for Left
       },
       {
         id: 'gh_l_rotation',
         jointId: 'gh_left',
-        displayName: 'GH Axial Rotation (IR/ER)',
-        axis: 'X', // X-axis for Rotation
+        displayName: 'GH Axial Rotation',
+        axis: 'X', // X-axis is long axis
         index: 0,
         neutral: 0,
         range: { min: -90 * DEG_TO_RAD, max: 90 * DEG_TO_RAD },

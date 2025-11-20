@@ -6,7 +6,7 @@
  */
 
 import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
-import { useFrame, useThree, ThreeEvent } from '@react-three/fiber';
+import { useFrame } from '@react-three/fiber';
 import { Html } from '@react-three/drei';
 import * as THREE from 'three';
 import { CCDIKHelper } from 'three/examples/jsm/animation/CCDIKSolver.js';
@@ -14,19 +14,19 @@ import { RotationCompensatedIKSolver } from './utils/RotationCompensatedIKSolver
 import { 
   buildIKConfiguration,
   findBoneByName, 
-  getIKChainConfig,
-  updateIKTarget,
-  type IKChainConfig 
+  getIKChainConfig, 
+  updateIKTarget 
 } from './utils/ikSolverConfig';
-import { captureConstraintReferencePose, clearConstraintReferencePose, validateRotation, type ConstraintViolation } from './constraints/constraintValidator';
-import { captureNeutralPoseFromSkeleton } from './constraints/neutralPoseLoader';
+import { SKELETON_MAP } from './utils/skeletonMap';
+import { JOINT_HANDLE_NAMES } from './utils/jointLabels';
+import { captureConstraintReferencePose, clearConstraintReferencePose, type ConstraintViolation } from './constraints/constraintValidator';
 import { useViewerDispatch, useViewerSelector } from './state/viewerState';
 import { captureJointNeutralPose, clearJointNeutralPose } from './biomech/jointAngles';
 import { BiomechState } from '../../biomech/engine/biomechState';
 import { useCoordinateEngine } from './utils/debugFlags';
-import { hasConstraint } from './constraints/jointConstraints';
-import { getConstraintForBone } from './constraints/jointConstraints';
+
 import { capturePoseSnapshot, diffPoseSnapshots, formatPoseDeltas, type PoseSnapshot } from './utils/skeletonDiagnostics';
+import { useBoneInteraction } from './hooks/useBoneInteraction';
 import './InteractiveBoneController.css'
 
 // Global feature flag to table IK end-to-end without removing code paths
@@ -49,37 +49,6 @@ export interface InteractiveBoneControllerProps {
   resetCounter?: number;
 }
 
-interface DragState {
-  isDragging: boolean;
-  selectedBone: THREE.Bone | null;
-  ikTarget: THREE.Bone | null;
-  dragPlane: THREE.Plane;
-  initialTargetPos: THREE.Vector3;
-  chainConfig: IKChainConfig | null;
-}
-
-const JOINT_HANDLE_NAMES = [
-  'mixamorig1LeftShoulder',
-  'mixamorig1LeftArm',
-  'mixamorig1LeftForeArm',
-  'mixamorig1LeftHand',
-  'mixamorig1RightShoulder',
-  'mixamorig1RightArm',
-  'mixamorig1RightForeArm',
-  'mixamorig1RightHand',
-  'mixamorig1LeftUpLeg',
-  'mixamorig1LeftLeg',
-  'mixamorig1LeftFoot',
-  'mixamorig1RightUpLeg',
-  'mixamorig1RightLeg',
-  'mixamorig1RightFoot',
-  'mixamorig1Spine',
-  'mixamorig1Spine1',
-  'mixamorig1Spine2',
-  'mixamorig1Neck',
-  'mixamorig1Head'
-];
-
 export default function InteractiveBoneController({
   skinnedMesh,
   skeleton,
@@ -96,7 +65,6 @@ export default function InteractiveBoneController({
   resetCounter = 0,
 }: InteractiveBoneControllerProps) {
   
-  const { camera, raycaster, gl } = useThree();
   const animationId = useViewerSelector(state => state.playback.animationId);
   const biomechState = useViewerSelector(state => state.ik.biomechState); // Get biomechState from store
   const dispatch = useViewerDispatch();
@@ -112,6 +80,9 @@ export default function InteractiveBoneController({
   useEffect(() => {
     console.log(`🧬 Coordinate engine ${coordinateEngineEnabled ? 'ENABLED' : 'DISABLED'}`);
   }, [coordinateEngineEnabled]);
+
+  // Force re-render when calibration changes
+  const [calibrationVersion, setCalibrationVersion] = useState(0);
 
   // Keep viewer state in sync with coordinate engine lifecycle
   useEffect(() => {
@@ -138,8 +109,8 @@ export default function InteractiveBoneController({
   }, [dispatch]);
   
   const [isReady, setIsReady] = useState(false);
-  const [isShiftHeld, setIsShiftHeld] = useState(false);
   const bindPoseRef = useRef<Map<string, { position: THREE.Vector3; quaternion: THREE.Quaternion; scale: THREE.Vector3 }>>(new Map());
+  const armatureBindPoseRef = useRef<{ position: THREE.Vector3; quaternion: THREE.Quaternion; scale: THREE.Vector3 } | null>(null);
   const ikRestPoseRef = useRef<Map<string, { position: THREE.Vector3; quaternion: THREE.Quaternion; scale: THREE.Vector3 }>>(new Map());
   // Note: constraintBindPoseRef removed - now using shared constraintReferencePose from constraintValidator.ts
   const restPoseSnapshotRef = useRef<PoseSnapshot | null>(null);
@@ -157,28 +128,106 @@ export default function InteractiveBoneController({
 ${formatPoseDeltas(deltas)}`);
   }, [showDebugInfo, skeleton]);
   
-  const dragStateRef = useRef<DragState>({
-    isDragging: false,
-    selectedBone: null,
-    ikTarget: null,
-    dragPlane: new THREE.Plane(),
-    initialTargetPos: new THREE.Vector3(),
-    chainConfig: null
-  });
-  
-  const [highlightedBone, setHighlightedBone] = useState<THREE.Bone | null>(null);
-  const [constraintViolations, setConstraintViolations] = useState(0);
-  const [hoverBone, setHoverBone] = useState<THREE.Bone | null>(null);
-  const prevConstraintsEnabledRef = useRef(constraintsEnabled);
   const effectorWorldPos = useMemo(() => new THREE.Vector3(), []);
   const targetWorldPos = useMemo(() => new THREE.Vector3(), []);
   const jointHandleBones = useMemo(() => {
     if (!skeleton) return [];
     return JOINT_HANDLE_NAMES.map(name => findBoneByName(skeleton, name)).filter((bone): bone is THREE.Bone => Boolean(bone));
   }, [skeleton]);
-  
-  // Refs for raycasting
-  const pointerRef = useRef(new THREE.Vector2());
+
+  // Scapulohumeral Rhythm Logic
+  const applyShoulderRhythm = useCallback(() => {
+    if (!skeleton) return;
+    
+    const applySide = (armName: string, shoulderName: string, spineName: string, isLeft: boolean) => {
+      const arm = findBoneByName(skeleton, armName);
+      const shoulder = findBoneByName(skeleton, shoulderName);
+      const spine = findBoneByName(skeleton, spineName);
+      
+      if (!arm || !shoulder || !spine) return;
+      
+      // Calculate Arm elevation relative to Spine (Thorax)
+      // Use world vectors to determine angle
+      const armVector = new THREE.Vector3(0, 1, 0).applyQuaternion(arm.quaternion);
+      const spineVector = new THREE.Vector3(0, 1, 0).applyQuaternion(spine.quaternion);
+      
+      // Angle between arm and spine
+      const angleRad = armVector.angleTo(spineVector);
+      const angleDeg = THREE.MathUtils.radToDeg(angleRad);
+      
+      // Elevation is roughly (180 - angleDeg)
+      let elevation = 180 - angleDeg;
+      elevation = Math.max(0, Math.min(180, elevation));
+      
+      // Scapulohumeral Rhythm: 2:1 ratio.
+      // Total Elevation = GH + ST.
+      // ST = Total / 3.
+      
+      // CRITICAL FIX: The restPose is the T-pose (Arm Elev ~90°).
+      // In T-pose, the clavicle is already elevated ~20-30°.
+      // If we just apply 'targetST' (e.g. 0° for arms down) as an absolute rotation on top of T-pose,
+      // we are actually ADDING 0° to the existing T-pose elevation.
+      // Result: When arms are down, shoulders remain shrugged (at T-pose height).
+      //
+      // We must apply the DELTA from T-pose.
+      // T-pose corresponds to ~90° arm elevation.
+      const tPoseArmElevation = 90;
+      const deltaElevation = elevation - tPoseArmElevation;
+      
+      // ST moves 1 degree for every 3 degrees of arm elevation
+      const stRotationDelta = deltaElevation / 3;
+      
+      // Apply ST rotation to Shoulder bone (Clavicle)
+      // We assume Z axis is elevation axis for Clavicle (based on joints.ts st_right/left)
+      const restPose = ikRestPoseRef.current.get(shoulder.uuid);
+      if (!restPose) return;
+      
+      const restQuat = restPose.quaternion.clone();
+      const axis = new THREE.Vector3(0, 0, 1);
+      // Heuristic: Left = -Z, Right = +Z for elevation (based on joints.ts)
+      // st_right: Z is Upward Rotation. Range -10 to 60.
+      // st_left: Z is Upward Rotation.
+      const sign = isLeft ? -1 : 1; 
+      
+      const rotation = new THREE.Quaternion().setFromAxisAngle(axis, THREE.MathUtils.degToRad(stRotationDelta * sign));
+      
+      shoulder.quaternion.copy(restQuat.multiply(rotation));
+      shoulder.updateMatrixWorld(true);
+    };
+    
+    applySide(SKELETON_MAP.LeftArm, SKELETON_MAP.LeftShoulder, SKELETON_MAP.Spine2, true);
+    applySide(SKELETON_MAP.RightArm, SKELETON_MAP.RightShoulder, SKELETON_MAP.Spine2, false);
+    
+  }, [skeleton]);
+
+  // Use the new interaction hook
+  const {
+    dragStateRef,
+    highlightedBone,
+    setHighlightedBone,
+    hoverBone,
+    isShiftHeld,
+    constraintViolations,
+    handlers
+  } = useBoneInteraction({
+    skeleton,
+    skinnedMesh,
+    ikSolver,
+    ikTargets,
+    jointHandleBones,
+    enabled,
+    isReady,
+    showDebugInfo,
+    constraintsEnabled,
+    ikRestPoseRef,
+    restPoseSnapshotRef,
+    onBoneSelect,
+    onDragStart,
+    onDragEnd,
+    onConstraintViolation,
+    onAfterSolve: applyShoulderRhythm,
+    logPoseDiagnostics
+  });
 
   const syncIKTargetsToEffectors = useCallback(() => {
     if (!skeleton || ikTargets.size === 0) return;
@@ -215,12 +264,34 @@ ${formatPoseDeltas(deltas)}`);
         scale: bone.scale.clone()
       };
     });
+
+    // Capture Armature (root) transform
+    const armature = skeleton.bones[0]?.parent;
+    if (armature) {
+      armatureBindPoseRef.current = {
+        position: armature.position.clone(),
+        quaternion: armature.quaternion.clone(),
+        scale: armature.scale.clone()
+      };
+      console.log('📸 Captured Armature bind pose:', armature.name, armature.scale.toArray());
+    }
   }, [skeleton]);
 
   const restoreBindPose = useCallback((): boolean => {
     if (!skeleton) return false;
     const storage = bindPoseRef.current;
     if (storage.size === 0) return false;
+    
+    // Restore Armature transform first
+    const armature = skeleton.bones[0]?.parent;
+    if (armature && armatureBindPoseRef.current) {
+      const snapshot = armatureBindPoseRef.current;
+      armature.position.copy(snapshot.position);
+      armature.quaternion.copy(snapshot.quaternion);
+      armature.scale.copy(snapshot.scale);
+      armature.updateMatrixWorld(true);
+    }
+
     skeleton.bones.forEach((bone) => {
       const snapshot = storage.get(bone.uuid);
       if (!snapshot) return;
@@ -237,82 +308,56 @@ ${formatPoseDeltas(deltas)}`);
   useEffect(() => {
     if (!skeleton || bindPoseRef.current.size > 0) return;
     
-    console.log('📸 Capturing initial bind pose and constraint reference...');
-    skeleton.bones.forEach((bone) => {
-      bindPoseRef.current.set(bone.uuid, {
-        position: bone.position.clone(),
-        quaternion: bone.quaternion.clone(),
-        scale: bone.scale.clone()
-      });
-    });
-    
-    // Capture constraint reference from clean T-pose
-    console.log('📐 Capturing constraint reference pose from anatomical T-pose...');
-    captureConstraintReferencePose(skeleton);
-    console.log(`✅ Constraint reference locked (${skeleton.bones.filter(b => hasConstraint(b.name)).length} bones)`);
-    
-    // ALSO capture as Neutral Position reference if not already loaded
-    // This allows us to use the first animation's skeleton as neutral reference
-    const captured = captureNeutralPoseFromSkeleton(skeleton, animationId);
-    
-    // Capture biomech neutral pose for teaching-oriented joint angles
-    if (captured) {
-      console.log('🔬 Captured Neutral Position from skeleton (fallback mode)');
-    }
-    console.log('🔬 Capturing biomech neutral pose for joint coordinate systems...');
-    captureJointNeutralPose(skeleton);
-    console.log('✅ Biomech neutral pose captured for teaching angles');
-    
-    // Phase 2: Initialize coordinate engine if enabled
-    if (coordinateEngineEnabled && !biomechStateRef.current) {
-      console.log('🚀 Phase 2: Initializing coordinate engine...');
-      biomechStateRef.current = new BiomechState();
-      const initResult = biomechStateRef.current.initialize(skeleton);
-      
-      if (initResult.success) {
-        console.log(`✅ BiomechState initialized: ${initResult.jointsInitialized} joints, ${initResult.segmentCount} segments`);
-        dispatch({ type: 'ik/setBiomechState', biomechState: biomechStateRef.current });
+    const initializeController = async () => {
+      try {
+        // SUCCESS: Neutral_Model.glb contains BOTH mesh geometry AND anatomical neutral pose
+        // The skeleton is already in the correct calibration pose - no transform needed!
         
-        // Calibrate neutral pose if this is Neutral.glb animation
-        if (animationId && animationId.toLowerCase().includes('neutral')) {
-          const calibResult = biomechStateRef.current.calibrateNeutral(animationId);
-          if (calibResult.success) {
-            console.log(`✅ Neutral pose calibrated: ${calibResult.jointsCalibratedCount} joints`);
-          } else {
-            console.warn('⚠️ Neutral pose calibration failed');
-          }
+        console.log('📸 Capturing Anatomical Neutral Pose (base model is Neutral_Model.glb)...');
+        
+        // Capture current skeleton state as bind pose
+        skeleton.bones.forEach((bone) => {
+          bindPoseRef.current.set(bone.uuid, {
+            position: bone.position.clone(),
+            quaternion: bone.quaternion.clone(), // Already in Neutral!
+            scale: bone.scale.clone()
+          });
+        });
+        
+        console.log('✅ Controller initialized with Anatomical Neutral Pose (from Neutral_Model.glb)');
+        
+        // Capture biomech neutral pose for joint coordinate systems
+        console.log('🔬 Capturing biomech neutral pose for joint coordinate systems...');
+        captureJointNeutralPose(skeleton);
+        
+        // Phase 2: Initialize coordinate engine if enabled
+        if (coordinateEngineEnabled && !biomechStateRef.current) {
+           console.log('🚀 Phase 2: Initializing coordinate engine...');
+           biomechStateRef.current = new BiomechState();
+           const initResult = biomechStateRef.current.initialize(skeleton);
+           
+           if (initResult.success) {
+             dispatch({ type: 'ik/setBiomechState', biomechState: biomechStateRef.current });
+             
+             // Calibrate immediately since we are now in Neutral Pose
+             const calibResult = biomechStateRef.current.calibrateNeutral('Neutral.glb (File)');
+             if (calibResult.success) {
+                setCalibrationVersion(v => v + 1);
+             }
+           }
         }
-      } else {
-        console.error('❌ BiomechState initialization failed:', initResult.errors);
-        console.error('   Missing segments:', initResult.missingSegments);
-        dispatch({ type: 'ik/setBiomechState', biomechState: null });
+        
+        setIsReady(true);
+        
+      } catch (err) {
+        console.error('❌ Failed to load Neutral Pose:', err);
+        // Fallback: Capture current state (better than nothing, but might be T-pose or animated)
+        captureConstraintReferencePose(skeleton);
+        setIsReady(true);
       }
-    }
+    };
     
-    // DIAGNOSTIC: Check actual T-pose rotations for key joints to verify axis conventions
-    console.log('🔍 T-POSE EULER ANGLES (for axis convention verification):');
-    
-    const diagnosticBones = [
-      'mixamorig1RightArm',
-      'mixamorig1LeftArm',
-      'mixamorig1RightForeArm',
-      'mixamorig1LeftForeArm',
-      'mixamorig1RightUpLeg',
-      'mixamorig1LeftUpLeg',
-      'mixamorig1RightLeg',
-      'mixamorig1LeftLeg'
-    ];
-    
-    diagnosticBones.forEach(boneName => {
-      const bone = skeleton.bones.find(b => b.name === boneName);
-      if (bone) {
-        const euler = new THREE.Euler().setFromQuaternion(bone.quaternion, 'XYZ');
-        console.log(`  ${boneName}: x=${THREE.MathUtils.radToDeg(euler.x).toFixed(1)}° y=${THREE.MathUtils.radToDeg(euler.y).toFixed(1)}° z=${THREE.MathUtils.radToDeg(euler.z).toFixed(1)}°`);
-      }
-    });
-    
-    // Mark as ready so playback mode joint spheres appear on initial load
-    setIsReady(true);
+    initializeController();
     
     return () => {
       clearConstraintReferencePose();
@@ -353,6 +398,32 @@ ${formatPoseDeltas(deltas)}`);
       // The skeleton was already correctly bound by normalizeHumanModel()
       skeleton.bones.forEach(b => b.updateMatrixWorld(true));
       skinnedMesh.updateMatrixWorld(true);
+
+      // DIAGNOSTIC: Verify bone inverses align with the scaled rig
+      if (skeleton.bones.length > 0 && skeleton.boneInverses.length > 0) {
+        const testBoneIndex = 0; // Usually Hips
+        const testBone = skeleton.bones[testBoneIndex];
+        const inverse = skeleton.boneInverses[testBoneIndex];
+        
+        if (testBone && inverse) {
+          const worldMatrix = testBone.matrixWorld.clone();
+          const product = new THREE.Matrix4().multiplyMatrices(worldMatrix, inverse);
+          const identity = new THREE.Matrix4();
+          
+          // Check if product is close to identity
+          let maxDiff = 0;
+          for (let i = 0; i < 16; i++) {
+            maxDiff = Math.max(maxDiff, Math.abs(product.elements[i] - identity.elements[i]));
+          }
+          
+          if (maxDiff < 0.01) {
+            console.log('✅ Bone inverses verified: aligned with current bind pose');
+          } else {
+            console.warn(`⚠️ Bone inverses mismatch! Max diff: ${maxDiff.toFixed(6)}. Skinning artifacts may occur.`);
+            console.warn('   This suggests the model was scaled/moved AFTER calculateInverses() was called.');
+          }
+        }
+      }
 
       // Reset to bind T-pose if bindPose was already captured
       // (Constraint reference was already captured in the always-run effect above)
@@ -449,7 +520,7 @@ ${formatPoseDeltas(deltas)}`);
       }
       // Note: bindPoseRef and constraint reference are cleaned up by the always-run effect
     };
-  }, [skeleton, skeletonRoot, skinnedMesh, enabled, showDebugInfo, captureBindPose, biomechState]); // Add biomechState dependency
+  }, [skeleton, skeletonRoot, skinnedMesh, enabled, showDebugInfo, captureBindPose, biomechState, calibrationVersion]); // Add calibrationVersion dependency
 
   // Remove IK helper when switching back to playback mode
   useEffect(() => {
@@ -495,15 +566,15 @@ ${formatPoseDeltas(deltas)}`);
       // Calling update() here would try to solve IK with targets at current positions = no-op or worse
       
       setHighlightedBone(null);
-      setHoverBone(null);
-      setConstraintViolations(0);
+      // setHoverBone(null); // Handled by hook
+      // setConstraintViolations(0); // Handled by hook
       onBoneSelect?.(null);
       onConstraintViolation?.([]);
       console.log('🔄 Reset to bind pose (snapshot)');
     } catch (e) {
       console.warn('Failed to reset to bind pose', e);
     }
-  }, [skeleton, skeletonRoot, syncIKTargetsToEffectors, restoreBindPose, captureBindPose, onBoneSelect, onConstraintViolation]);
+  }, [skeleton, skeletonRoot, syncIKTargetsToEffectors, restoreBindPose, captureBindPose, onBoneSelect, onConstraintViolation, setHighlightedBone]);
 
 
   const lastResetCounterRef = useRef(resetCounter);
@@ -516,423 +587,28 @@ ${formatPoseDeltas(deltas)}`);
     }
   }, [resetCounter, resetToBindPose]);
 
+  // Auto-reset on load (once when ready)
+  const hasAutoResetRef = useRef(false);
   useEffect(() => {
-    if (!constraintsEnabled && prevConstraintsEnabledRef.current !== constraintsEnabled) {
-      setConstraintViolations(0);
-      onConstraintViolation?.([]);
+    if (isReady && !hasAutoResetRef.current && enabled) {
+      console.log('🚀 Auto-resetting to bind pose on initialization...');
+      resetToBindPose();
+      hasAutoResetRef.current = true;
     }
-    prevConstraintsEnabledRef.current = constraintsEnabled;
-  }, [constraintsEnabled, onConstraintViolation]);
+  }, [isReady, enabled, resetToBindPose]);
 
   useEffect(() => {
     if (!isReady || dragStateRef.current.isDragging) return;
     syncIKTargetsToEffectors();
-  }, [isReady, syncIKTargetsToEffectors]);
-  
-  // Find joint handle at pointer (for Shift+click inspection)
-  const findJointHandleAtPointer = useCallback((event: ThreeEvent<PointerEvent>): THREE.Bone | null => {
-    if (!jointHandleBones || jointHandleBones.length === 0) return null;
-    
-    const ray: THREE.Ray | null = (event as any).ray ?? null;
-    if (!ray) return null;
-    
-    const tmpWorld = new THREE.Vector3();
-    let closestJoint: THREE.Bone | null = null;
-    let closestDistance = 0.15; // Slightly larger click radius for joint handles
-    
-    // Check each joint handle
-    jointHandleBones.forEach((bone) => {
-      bone.getWorldPosition(tmpWorld);
-      const d = ray.distanceToPoint(tmpWorld);
-      if (d < closestDistance) {
-        closestDistance = d;
-        closestJoint = bone;
-      }
-    });
-    
-    return closestJoint;
-  }, [jointHandleBones]);
-  
-  // Find IK target at pointer (raycast against target spheres, not bones)
-  const findTargetAtPointer = useCallback((event: ThreeEvent<PointerEvent>): { target: THREE.Bone; chainName: string } | null => {
-    if (!ikTargets || ikTargets.size === 0) return null;
-    
-    const ray: THREE.Ray | null = (event as any).ray ?? null;
-    if (!ray) return null;
-    
-    const tmpWorld = new THREE.Vector3();
-    let closestTarget: { target: THREE.Bone; chainName: string } | null = null;
-    let closestDistance = 0.15; // Max click distance (meters)
-    
-    // Check each IK target
-    ikTargets.forEach((target, chainName) => {
-      target.getWorldPosition(tmpWorld);
-      const d = ray.distanceToPoint(tmpWorld);
-      if (d < closestDistance) {
-        closestDistance = d;
-        closestTarget = { target, chainName };
-      }
-    });
-    
-    return closestTarget;
-  }, [ikTargets]);
-  
-  // Calculate drag plane perpendicular to camera
-  const calculateDragPlane = useCallback((position: THREE.Vector3): THREE.Plane => {
-    const cameraDirection = new THREE.Vector3();
-    camera.getWorldDirection(cameraDirection);
-    
-    // Plane normal points toward camera
-    const plane = new THREE.Plane();
-    plane.setFromNormalAndCoplanarPoint(cameraDirection.negate(), position);
-    
-    return plane;
-  }, [camera]);
-  
-  // Handle pointer down (start drag)
-  const handlePointerDown = useCallback((event: ThreeEvent<PointerEvent>) => {
-    if (!enabled || !isReady || !ikSolver) return;
-    
-    // If Shift is held, don't start IK drag - let JointHandle components handle their own clicks
-    if (event.nativeEvent.shiftKey || isShiftHeld) {
-      return; // JointHandle will stop propagation after handling selection
-    }
-    
-    // Find which IK target was clicked
-    const targetInfo = findTargetAtPointer(event);
-    if (!targetInfo) return;
-    
-    const { target: ikTarget, chainName } = targetInfo;
-    
-    // Get chain config
-    const chainConfig = getIKChainConfig(chainName);
-    if (!chainConfig) {
-      console.warn(`No config found for chain ${chainName}`);
-      return;
-    }
-    
-    // Find the effector bone for this chain (for display/events)
-    const effectorBone = findBoneByName(skeleton, chainConfig.effectorBoneName);
-    
-    // Get target's current world position
-    const targetWorldPos = new THREE.Vector3();
-    ikTarget.getWorldPosition(targetWorldPos);
-    
-    // Calculate drag plane
-    const dragPlane = calculateDragPlane(targetWorldPos);
-    
-    // Start dragging
-    dragStateRef.current = {
-      isDragging: true,
-      selectedBone: effectorBone || null,
-      ikTarget,
-      dragPlane,
-      initialTargetPos: targetWorldPos.clone(),
-      chainConfig
-    };
-    
-    setHighlightedBone(effectorBone || null);
-    onBoneSelect?.(effectorBone || null);
-    onDragStart?.(effectorBone || ikTarget, dragPlane);
-
-    if (showDebugInfo) {
-      restPoseSnapshotRef.current = restPoseSnapshotRef.current || capturePoseSnapshot(skeleton);
-    }
-    
-    // Set pointer capture for smooth dragging
-    (event.target as any).setPointerCapture?.(event.pointerId);
-    
-    // Only stop propagation when we actually begin dragging
-    event.stopPropagation();
-    
-    console.log(`🎯 Started dragging IK target: ${chainName}`);
-    
-  }, [enabled, isReady, ikSolver, ikTargets, skeleton, isShiftHeld, findTargetAtPointer, findJointHandleAtPointer, calculateDragPlane, onBoneSelect, onDragStart]);
-  
-  // Handle pointer move (drag)
-  const handlePointerMove = useCallback((event: ThreeEvent<PointerEvent>) => {
-    const dragState = dragStateRef.current;
-    
-    if (!dragState.isDragging || !dragState.ikTarget || !ikSolver) return;
-    
-    // While dragging, consume events so OrbitControls doesn't fight us
-    event.stopPropagation();
-    
-    // Update pointer position
-    const rect = gl.domElement.getBoundingClientRect();
-    pointerRef.current.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-    pointerRef.current.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
-    
-    // Raycast from camera through pointer
-    raycaster.setFromCamera(pointerRef.current, camera);
-    
-    // Intersect with drag plane
-    const intersection = new THREE.Vector3();
-    const raycastSucceeded = raycaster.ray.intersectPlane(dragState.dragPlane, intersection);
-    
-    if (raycastSucceeded) {
-      let preSolveSnapshot: PoseSnapshot | null = null;
-      if (showDebugInfo) {
-        preSolveSnapshot = capturePoseSnapshot(skeleton);
-      }
-      // CRITICAL: Restore IK rest pose ONLY for bones in the active chain
-      // Only touch bones that will be modified by the IK solver to prevent drift accumulation
-      let restoredCount = 0;
-      if (dragState.chainConfig) {
-        // Build list of bones in this specific chain
-        const chainBoneNames = new Set([
-          dragState.chainConfig.effectorBoneName,
-          ...dragState.chainConfig.linkBoneNames
-        ]);
-        
-        // Only restore bones in this chain
-        skeleton.bones.forEach(bone => {
-          if (chainBoneNames.has(bone.name) && !bone.name.startsWith('IKTarget_')) {
-            const snapshot = ikRestPoseRef.current.get(bone.uuid);
-            if (snapshot) {
-              bone.position.copy(snapshot.position);
-              bone.quaternion.copy(snapshot.quaternion);
-              bone.scale.copy(snapshot.scale);
-              restoredCount++;
-            }
-          }
-        });
-      }
-      
-      if (restoredCount > 0) {
-        skeleton.bones.forEach(b => {
-          b.updateMatrix();
-          b.updateMatrixWorld(true);
-        });
-        skinnedMesh.updateMatrixWorld(true);
-        console.log(`🔄 Restored ${restoredCount} bones in active chain to IK rest pose before solve`);
-      }
-      
-      // Update IK target position
-      updateIKTarget(dragState.ikTarget, intersection);
-      
-      const firstBoneBeforeSolve = skeleton.bones[0].position.clone();
-      const firstBoneWorldBeforeSolve = new THREE.Vector3();
-      skeleton.bones[0].getWorldPosition(firstBoneWorldBeforeSolve);
-      
-      console.log('🎯 Target moved to:', intersection, 'Solving IK...');
-      console.log('   First bone LOCAL pos BEFORE:', firstBoneBeforeSolve);
-      console.log('   First bone WORLD pos BEFORE:', firstBoneWorldBeforeSolve);
-      
-      // Solve IK
-      ikSolver.update();
-      
-      const firstBoneAfterSolve = skeleton.bones[0].position.clone();
-      const firstBoneWorldAfterSolve = new THREE.Vector3();
-      skeleton.bones[0].getWorldPosition(firstBoneWorldAfterSolve);
-      
-      console.log('   First bone LOCAL pos AFTER:', firstBoneAfterSolve);
-      console.log('   First bone WORLD pos AFTER:', firstBoneWorldAfterSolve);
-      
-      // DIAGNOSTIC: Log rotation of affected bones
-      if (dragState.chainConfig && showDebugInfo) {
-        console.log('🔍 DIAGNOSTIC: Post-IK bone rotations (Euler XYZ):');
-        const chainBones = [
-          dragState.chainConfig.effectorBoneName,
-          ...dragState.chainConfig.linkBoneNames
-        ];
-        chainBones.forEach(boneName => {
-          const bone = skeleton.bones.find(b => b.name === boneName);
-          if (bone) {
-            const euler = new THREE.Euler().setFromQuaternion(bone.quaternion, 'XYZ');
-            console.log(`  ${boneName}: x=${(euler.x * 180 / Math.PI).toFixed(1)}° y=${(euler.y * 180 / Math.PI).toFixed(1)}° z=${(euler.z * 180 / Math.PI).toFixed(1)}°`);
-          }
-        });
-      }
-      
-      // CRITICAL: Update all world matrices after IK solve
-      skeleton.bones.forEach(b => b.updateMatrixWorld(true));
-      skinnedMesh.updateMatrixWorld(true);
-      
-      console.log('✅ IK solved. First bone pos:', skeleton.bones[0]?.position);
-      
-      let afterSnapshot: PoseSnapshot | null = null;
-      if (showDebugInfo && dragState.chainConfig) {
-        const baselineSnapshot = preSolveSnapshot ?? restPoseSnapshotRef.current;
-        if (baselineSnapshot) {
-          afterSnapshot = capturePoseSnapshot(skeleton);
-          const chainBones = new Set([
-            dragState.chainConfig.effectorBoneName,
-            ...dragState.chainConfig.linkBoneNames
-          ]);
-          const deltas = diffPoseSnapshots(baselineSnapshot, afterSnapshot, 1e-3)
-            .filter(delta => chainBones.has(delta.boneName));
-          if (deltas.length) {
-            console.log(`🧪 Pose delta (${dragState.chainConfig.name}):\n${formatPoseDeltas(deltas)}`);
-          } else {
-            console.log(`🧪 Pose delta (${dragState.chainConfig.name}): none`);
-          }
-        }
-      }
-
-      if (showDebugInfo) {
-        logPoseDiagnostics(dragState.chainConfig?.name ?? 'Full Skeleton', afterSnapshot);
-      }
-
-      // Apply anatomical constraints post-IK solve
-      // QUATERNION-BASED RELATIVE CONSTRAINTS: Match manual probe behavior exactly
-      // Uses quaternion multiplication like setRelativeEuler() in constraintValidator.ts
-      // Apply constraints using the EXACT same system as manual probe
-      // This ensures IK and manual manipulation use identical constraint logic
-      if (constraintsEnabled && dragState.chainConfig) {
-        const chainBones = [
-          dragState.chainConfig.effectorBoneName,
-          ...dragState.chainConfig.linkBoneNames
-        ];
-        
-        if (showDebugInfo) {
-          console.log(`🔍 Applying constraints for ${dragState.chainConfig.name} chain using validateRotation():`);
-        }
-        
-        let clampedCount = 0;
-        chainBones.forEach(boneName => {
-          const bone = skeleton.bones.find(b => b.name === boneName);
-          if (!bone) return;
-          
-          const constraint = getConstraintForBone(boneName);
-          if (!constraint || !constraint.enabled) return;
-          
-          // Use the EXACT same validateRotation() function as manual probe
-          // This uses the shared constraintReferencePose from constraintValidator.ts
-          const result = validateRotation(bone, constraint, showDebugInfo);
-          
-          if (result.clamped) {
-            clampedCount++;
-            if (showDebugInfo) {
-              console.log(`  ${boneName}: ${result.violations.join(', ')}`);
-            }
-          }
-        });
-        
-        if (clampedCount > 0 && showDebugInfo) {
-          console.log(`✅ Applied constraints to ${clampedCount} bones using validateRotation()`);
-        }
-      }
-    }
-    
-  }, [ikSolver, skeleton, camera, raycaster, gl, constraintViolations, constraintsEnabled, onConstraintViolation]);
-  
-  // Handle pointer up (end drag)
-  const handlePointerUp = useCallback((event: ThreeEvent<PointerEvent>) => {
-    const dragState = dragStateRef.current;
-    
-    if (!dragState.isDragging) return;
-    
-    // End of drag: consume this final event
-    event.stopPropagation();
-    
-    // Release pointer capture
-    (event.target as any).releasePointerCapture?.(event.pointerId);
-    
-    console.log(`✅ Finished dragging: ${dragState.selectedBone?.name}`);
-    
-    // CRITICAL: Update IK rest pose ONLY for bones in the active chain
-    // Only update bones that were actually modified by the IK solver to prevent drift
-    if (dragState.chainConfig) {
-      const chainBoneNames = new Set([
-        dragState.chainConfig.effectorBoneName,
-        ...dragState.chainConfig.linkBoneNames
-      ]);
-      
-      let updatedCount = 0;
-      skeleton.bones.forEach((bone) => {
-        if (chainBoneNames.has(bone.name) && !bone.name.startsWith('IKTarget_')) {
-          ikRestPoseRef.current.set(bone.uuid, {
-            position: bone.position.clone(),
-            quaternion: bone.quaternion.clone(),
-            scale: bone.scale.clone()
-          });
-          updatedCount++;
-        }
-      });
-      console.log(`📸 Updated IK rest pose for ${updatedCount} bones in ${dragState.chainConfig.name} chain`);
-    }
-    
-    // Call drag end callback
-    onDragEnd?.();
-    
-    // Reset drag state
-    dragStateRef.current = {
-      ...dragState,
-      isDragging: false
-    };
-    
-  }, [skeleton, onDragEnd]);
-  
-  // Handle hover (visual feedback)
-  const handlePointerEnter = useCallback((event: ThreeEvent<PointerEvent>) => {
-    if (!enabled || dragStateRef.current.isDragging) return;
-    
-    const targetInfo = findTargetAtPointer(event);
-    if (targetInfo) {
-      // Show which chain we're hovering over
-      const chainConfig = getIKChainConfig(targetInfo.chainName);
-      if (chainConfig) {
-        const effectorBone = findBoneByName(skeleton, chainConfig.effectorBoneName);
-        setHoverBone(effectorBone || null);
-      }
-      gl.domElement.style.cursor = 'grab';
-    }
-  }, [enabled, skeleton, findTargetAtPointer, gl]);
-  
-  const handlePointerLeave = useCallback(() => {
-    setHoverBone(null);
-    if (!dragStateRef.current.isDragging) {
-      gl.domElement.style.cursor = 'default';
-    }
-  }, [gl]);
-
-  const handleJointHandleSelect = useCallback((bone: THREE.Bone) => {
-    setHighlightedBone(bone);
-    onBoneSelect?.(bone);
-  }, [onBoneSelect]);
-
-  const handleJointHandleHover = useCallback((bone: THREE.Bone | null) => {
-    if (dragStateRef.current.isDragging) return;
-    setHoverBone(bone);
-  }, []);
-  
-  // Update cursor during drag
-  useEffect(() => {
-    if (dragStateRef.current.isDragging) {
-      gl.domElement.style.cursor = 'grabbing';
-    } else if (hoverBone && isShiftHeld) {
-      gl.domElement.style.cursor = 'pointer'; // Pointer for inspection
-    } else if (hoverBone) {
-      gl.domElement.style.cursor = 'grab'; // Grab for IK drag
-    } else {
-      gl.domElement.style.cursor = 'default';
-    }
-  }, [hoverBone, isShiftHeld, gl]);
-  
-  // Keyboard event listeners for Shift key
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Shift') setIsShiftHeld(true);
-    };
-    const handleKeyUp = (e: KeyboardEvent) => {
-      if (e.key === 'Shift') setIsShiftHeld(false);
-    };
-    
-    window.addEventListener('keydown', handleKeyDown);
-    window.addEventListener('keyup', handleKeyUp);
-    
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-      window.removeEventListener('keyup', handleKeyUp);
-    };
-  }, []);
+  }, [isReady, syncIKTargetsToEffectors, dragStateRef]);
   
   // Continuous IK solving and constraint checking
   useFrame(() => {
     if (!ikSolver || !enabled) return;
     if (!dragStateRef.current.isDragging) {
       syncIKTargetsToEffectors();
+      // Also apply rhythm when not dragging (e.g. manual FK)
+      applyShoulderRhythm();
     }
   });
   
@@ -960,11 +636,11 @@ ${formatPoseDeltas(deltas)}`);
       {/* Interaction layer: invisible capture volume around the model.
           We avoid re-parenting the actual SkinnedMesh to prevent flicker/twitching. */}
       <mesh
-        onPointerDown={handlePointerDown}
-        onPointerMove={handlePointerMove}
-        onPointerUp={handlePointerUp}
-        onPointerEnter={handlePointerEnter}
-        onPointerLeave={handlePointerLeave}
+        onPointerDown={handlers.handlePointerDown}
+        onPointerMove={handlers.handlePointerMove}
+        onPointerUp={handlers.handlePointerUp}
+        onPointerEnter={handlers.handlePointerEnter}
+        onPointerLeave={handlers.handlePointerLeave}
         position={[0, 1.0, 0]}
       >
         <boxGeometry args={[1.2, 2.2, 1.0]} />
@@ -993,7 +669,7 @@ ${formatPoseDeltas(deltas)}`);
                 key={`playback-joint-${bone.uuid}`}
                 bone={bone}
                 isSelected={highlightedBone?.uuid === bone.uuid}
-                onSelect={() => handleJointHandleSelect(bone)}
+                onSelect={() => handlers.handleJointHandleSelect(bone)}
                 size={0.05}
               />
             ))
@@ -1005,8 +681,8 @@ ${formatPoseDeltas(deltas)}`);
                 bone={bone}
                 isSelected={highlightedBone?.uuid === bone.uuid}
                 isShiftHeld={isShiftHeld}
-                onSelect={() => handleJointHandleSelect(bone)}
-                onHover={(hovering: boolean) => handleJointHandleHover(hovering ? bone : null)}
+                onSelect={() => handlers.handleJointHandleSelect(bone)}
+                onHover={(hovering: boolean) => handlers.handleJointHandleHover(hovering ? bone : null)}
                 size={0.04}
                 opacity={0.65}
                 renderOrder={500}

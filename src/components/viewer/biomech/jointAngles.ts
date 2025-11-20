@@ -22,6 +22,7 @@
  */
 
 import * as THREE from 'three';
+import { SKELETON_MAP } from '../utils/skeletonMap';
 
 export type JointSide = 'left' | 'right';
 
@@ -105,15 +106,15 @@ export const JOINT_CONFIGS: JointConfig[] = [
   {
     id: 'hip',
     side: 'left',
-    proximalBoneName: 'mixamorig1Hips',
-    distalBoneName: 'mixamorig1LeftUpLeg',
+    proximalBoneName: SKELETON_MAP.Hips,
+    distalBoneName: SKELETON_MAP.LeftUpLeg,
     eulerOrder: 'XZY',
   },
   {
     id: 'hip',
     side: 'right',
-    proximalBoneName: 'mixamorig1Hips',
-    distalBoneName: 'mixamorig1RightUpLeg',
+    proximalBoneName: SKELETON_MAP.Hips,
+    distalBoneName: SKELETON_MAP.RightUpLeg,
     eulerOrder: 'XZY',
   },
 
@@ -125,15 +126,15 @@ export const JOINT_CONFIGS: JointConfig[] = [
   {
     id: 'knee',
     side: 'left',
-    proximalBoneName: 'mixamorig1LeftUpLeg',
-    distalBoneName: 'mixamorig1LeftLeg',
+    proximalBoneName: SKELETON_MAP.LeftUpLeg,
+    distalBoneName: SKELETON_MAP.LeftLeg,
     eulerOrder: 'XZY',
   },
   {
     id: 'knee',
     side: 'right',
-    proximalBoneName: 'mixamorig1RightUpLeg',
-    distalBoneName: 'mixamorig1RightLeg',
+    proximalBoneName: SKELETON_MAP.RightUpLeg,
+    distalBoneName: SKELETON_MAP.RightLeg,
     eulerOrder: 'XZY',
   },
 
@@ -145,15 +146,15 @@ export const JOINT_CONFIGS: JointConfig[] = [
   {
     id: 'ankle',
     side: 'left',
-    proximalBoneName: 'mixamorig1LeftLeg',
-    distalBoneName: 'mixamorig1LeftFoot',
+    proximalBoneName: SKELETON_MAP.LeftLeg,
+    distalBoneName: SKELETON_MAP.LeftFoot,
     eulerOrder: 'XYZ',
   },
   {
     id: 'ankle',
     side: 'right',
-    proximalBoneName: 'mixamorig1RightLeg',
-    distalBoneName: 'mixamorig1RightFoot',
+    proximalBoneName: SKELETON_MAP.RightLeg,
+    distalBoneName: SKELETON_MAP.RightFoot,
     eulerOrder: 'XYZ',
   },
 
@@ -164,15 +165,15 @@ export const JOINT_CONFIGS: JointConfig[] = [
   {
     id: 'sc',
     side: 'left',
-    proximalBoneName: 'mixamorig1Spine2',
-    distalBoneName: 'mixamorig1LeftShoulder',
+    proximalBoneName: SKELETON_MAP.Spine2,
+    distalBoneName: SKELETON_MAP.LeftShoulder,
     eulerOrder: 'XYZ', // Standard order for clavicle
   },
   {
     id: 'sc',
     side: 'right',
-    proximalBoneName: 'mixamorig1Spine2',
-    distalBoneName: 'mixamorig1RightShoulder',
+    proximalBoneName: SKELETON_MAP.Spine2,
+    distalBoneName: SKELETON_MAP.RightShoulder,
     eulerOrder: 'XYZ', // Standard order for clavicle
   },
 
@@ -184,16 +185,16 @@ export const JOINT_CONFIGS: JointConfig[] = [
   {
     id: 'shoulder',
     side: 'left',
-    proximalBoneName: 'mixamorig1LeftShoulder', // Updated to use Scapula/Clavicle as parent
-    distalBoneName: 'mixamorig1LeftArm',
+    proximalBoneName: SKELETON_MAP.LeftShoulder, // Updated to use Scapula/Clavicle as parent
+    distalBoneName: SKELETON_MAP.LeftArm,
     eulerOrder: 'ZXY',
     // No tPoseOffset needed - axis mapping handles it correctly
   },
   {
     id: 'shoulder',
     side: 'right',
-    proximalBoneName: 'mixamorig1RightShoulder', // Updated to use Scapula/Clavicle as parent
-    distalBoneName: 'mixamorig1RightArm',
+    proximalBoneName: SKELETON_MAP.RightShoulder, // Updated to use Scapula/Clavicle as parent
+    distalBoneName: SKELETON_MAP.RightArm,
     eulerOrder: 'ZXY',
     // No tPoseOffset needed - axis mapping handles it correctly
   },
@@ -206,15 +207,15 @@ export const JOINT_CONFIGS: JointConfig[] = [
   {
     id: 'elbow',
     side: 'left',
-    proximalBoneName: 'mixamorig1LeftArm',
-    distalBoneName: 'mixamorig1LeftForeArm',
+    proximalBoneName: SKELETON_MAP.LeftArm,
+    distalBoneName: SKELETON_MAP.LeftForeArm,
     eulerOrder: 'ZXY',
   },
   {
     id: 'elbow',
     side: 'right',
-    proximalBoneName: 'mixamorig1RightArm',
-    distalBoneName: 'mixamorig1RightForeArm',
+    proximalBoneName: SKELETON_MAP.RightArm,
+    distalBoneName: SKELETON_MAP.RightForeArm,
     eulerOrder: 'ZXY',
   },
 ];

@@ -1,4 +1,5 @@
-import { describe, it, expect } from 'vitest'
+// @vitest-environment jsdom
+import { describe, it, expect, afterEach } from 'vitest'
 import { render } from '@testing-library/react'
 import { useState } from 'react'
 import fs from 'node:fs'

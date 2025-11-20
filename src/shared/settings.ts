@@ -10,7 +10,7 @@ const KEY = 'viewer.settings.v1'
 
 const defaultSettings: ViewerSettings = {
   defaultSpeed: 0.5,
-  baseModelPath: 'models/Manny_Static.glb',
+  baseModelPath: 'models/animations/Neutral_Model.glb',
 }
 
 function readStorage(): Partial<ViewerSettings> | null {
