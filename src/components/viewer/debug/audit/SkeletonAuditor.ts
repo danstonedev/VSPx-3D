@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { SKELETON_MAP } from '../../utils/skeletonMap';
-import { JOINT_CONSTRAINTS, JointConstraint } from '../../constraints/jointConstraints';
+import { JOINT_CONSTRAINTS } from '../../constraints/jointConstraints';
 
 export interface AuditResult {
   boneName: string;
@@ -107,7 +107,7 @@ export class SkeletonAuditor {
     const rotationMatrix = new THREE.Matrix4().extractRotation(bone.matrixWorld);
     const localX = new THREE.Vector3(1, 0, 0).applyMatrix4(rotationMatrix).normalize();
     const localY = new THREE.Vector3(0, 1, 0).applyMatrix4(rotationMatrix).normalize();
-    const localZ = new THREE.Vector3(0, 0, 1).applyMatrix4(rotationMatrix).normalize();
+    // const localZ = new THREE.Vector3(0, 0, 1).applyMatrix4(rotationMatrix).normalize();
 
     // Assumption: Y-axis should point down the bone
     const alignmentDot = boneVector.dot(localY);

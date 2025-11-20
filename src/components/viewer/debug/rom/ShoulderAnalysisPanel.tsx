@@ -1,4 +1,3 @@
-import React from 'react';
 import * as THREE from 'three';
 import { getCompositeShoulderMotion } from '../../utils/shoulderAnalysis';
 import { getPlaneName } from '../../constraints/shoulderKinematics';

@@ -1,4 +1,3 @@
-import React from 'react';
 import { getCollisionSummary, type CollisionResult } from '../../constraints/selfCollisionDetector';
 
 interface CollisionSummaryProps {
