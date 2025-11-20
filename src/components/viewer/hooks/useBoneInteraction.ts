@@ -7,8 +7,7 @@ import {
   updateIKTarget, 
   type IKChainConfig 
 } from '../utils/ikSolverConfig';
-// @deprecated - TODO: Migrate to biomechState.computeJointState() in Phase 2
-import { validateRotation, type ConstraintViolation } from '../constraints/constraintValidator';
+import { validateRotation, type ConstraintViolation } from '../constraints/constraintValidator'; // @deprecated - TODO: Migrate to biomechState.computeJointState() in Phase 2
 import { getConstraintForBone } from '../constraints/jointConstraints';
 import { capturePoseSnapshot, diffPoseSnapshots, formatPoseDeltas, type PoseSnapshot } from '../utils/skeletonDiagnostics';
 import { RotationCompensatedIKSolver } from '../utils/RotationCompensatedIKSolver';
@@ -338,8 +337,7 @@ export function useBoneInteraction({
           const constraint = getConstraintForBone(boneName);
           if (!constraint || !constraint.enabled) return;
           
-          // @deprecated - TODO: Migrate to biomechState.computeJointState()
-          const result = validateRotation(bone, constraint, showDebugInfo);
+          const result = validateRotation(bone, constraint, showDebugInfo); // @deprecated - TODO: Migrate to biomechState.computeJointState()
           
           if (result.clamped) {
             clampedCount++;

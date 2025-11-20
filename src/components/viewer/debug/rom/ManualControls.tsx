@@ -3,8 +3,7 @@ import * as THREE from 'three';
 import { getBiomechMovementLabel } from '../../utils/jointLabels';
 import { getSegmentByBoneName } from '../../../../biomech/model/segments';
 import { getParentJoint } from '../../../../biomech/model/joints';
-// @deprecated - TODO: Migrate to biomechState.computeJointState() in Phase 2
-import { resetBoneToRest, setRelativeEuler, validateRotation } from '../../constraints/constraintValidator';
+import { resetBoneToRest, setRelativeEuler, validateRotation } from '../../constraints/constraintValidator'; // @deprecated - TODO: Migrate to biomechState.computeJointState() in Phase 2
 import type { BiomechState } from '../../../../biomech/engine/biomechState';
 import { getConstraintForBone } from '../../constraints/jointConstraints';
 
@@ -52,8 +51,7 @@ export function ManualControls({
       setRelativeEuler(selectedBone, euler);
       selectedBone.updateMatrixWorld(true);
       skeleton?.bones.forEach((bone) => bone.updateMatrixWorld(true));
-      // @deprecated - TODO: Migrate to biomechState.computeJointState()
-      validateRotation(selectedBone);
+      validateRotation(selectedBone); // @deprecated - TODO: Migrate to biomechState.computeJointState()
 
       return next;
     });
