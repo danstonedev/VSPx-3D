@@ -7,6 +7,7 @@ import {
   updateIKTarget, 
   type IKChainConfig 
 } from '../utils/ikSolverConfig';
+// @deprecated - TODO: Migrate to biomechState.computeJointState() in Phase 2
 import { validateRotation, type ConstraintViolation } from '../constraints/constraintValidator';
 import { getConstraintForBone } from '../constraints/jointConstraints';
 import { capturePoseSnapshot, diffPoseSnapshots, formatPoseDeltas, type PoseSnapshot } from '../utils/skeletonDiagnostics';
@@ -337,6 +338,7 @@ export function useBoneInteraction({
           const constraint = getConstraintForBone(boneName);
           if (!constraint || !constraint.enabled) return;
           
+          // @deprecated - TODO: Migrate to biomechState.computeJointState()
           const result = validateRotation(bone, constraint, showDebugInfo);
           
           if (result.clamped) {
