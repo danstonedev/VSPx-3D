@@ -207,7 +207,7 @@ ${formatPoseDeltas(deltas)}`);
     setHighlightedBone,
     hoverBone,
     isShiftHeld,
-    constraintViolations,
+    // constraintViolations,
     handlers
   } = useBoneInteraction({
     skeleton,
@@ -707,9 +707,9 @@ ${formatPoseDeltas(deltas)}`);
             <div className="ik-controller-debug__header">🎮 Interactive Bone Controller</div>
             <div className="ik-controller-debug__status">Status: {isReady ? '✅ Ready' : '⏳ Loading'}</div>
             <div className="ik-controller-debug__status">Mode: {dragStateRef.current.isDragging ? '🖱️ Dragging' : '⏸️ Idle'}</div>
-            {constraintViolations > 0 && (
+            {/* constraintViolations > 0 && (
               <div className="ik-controller-debug__violations">⚠️ Violations: {constraintViolations}</div>
-            )}
+            ) */}
             {highlightedBone && (
               <>
                 <div className="ik-controller-debug__selected">
