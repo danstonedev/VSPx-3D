@@ -700,7 +700,6 @@ ${formatPoseDeltas(deltas)}`);
           {highlightedBone && skeleton && (
             <DigitalGoniometer
               bone={highlightedBone}
-              skeleton={skeleton}
               biomechState={biomechState}
               size={0.25}
               opacity={0.12}

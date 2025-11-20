@@ -8,7 +8,7 @@
  */
 
 import * as THREE from 'three';
-import { JOINTS, getParentJoint } from '../../../biomech/model/joints';
+import { getParentJoint } from '../../../biomech/model/joints';
 import { JointDef } from '../../../biomech/model/types';
 import { getSegmentByBoneName } from '../../../biomech/model/segments';
 import { getNeutralPoseRotation, loadNeutralPose } from './neutralPoseLoader';
@@ -278,7 +278,7 @@ export function validateRotation(
  */
 export function applyConstraints(
   skeleton: THREE.Skeleton,
-  onlyEnabled: boolean = true
+  _onlyEnabled: boolean = true
 ): {
   totalBones: number;
   constrainedBones: number;

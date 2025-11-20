@@ -121,7 +121,7 @@ export class SkeletonAuditor {
     const constraint = getConstraintForBone(bone.name);
     if (constraint) {
       // If it's a hinge joint (1 DOF), check if the rotation axis is perpendicular to the bone
-      if (constraint.degreesOfFreedom === 1 || boneKey.includes('ForeArm') || boneKey.includes('Leg')) {
+      if (constraint.type === 'hinge' || boneKey.includes('ForeArm') || boneKey.includes('Leg')) {
         // Usually X is the hinge axis.
         // X should be perpendicular to the bone vector (Y).
         const orthogonality = Math.abs(boneVector.dot(localX));

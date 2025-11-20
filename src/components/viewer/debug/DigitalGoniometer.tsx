@@ -22,7 +22,6 @@ import './DigitalGoniometer.css';
 
 interface DigitalGoniometerProps {
   bone: THREE.Bone;
-  skeleton: THREE.Skeleton;
   biomechState?: BiomechState | null;
   size?: number;
   opacity?: number;
@@ -31,7 +30,6 @@ interface DigitalGoniometerProps {
 
 export function DigitalGoniometer({
   bone,
-  skeleton,
   biomechState,
   size = 0.3,
   opacity = 0.15,
