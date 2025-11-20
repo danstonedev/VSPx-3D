@@ -74,9 +74,10 @@ If it doesn't open automatically, navigate to: **http://localhost:3000**
 ```
 VSPx_3D_Viewer_Demo/
 ├── public/
-│   └── models/                  # 3D Models (GLB files)
-│       ├── Manny_Static.glb     # Base mannequin (T-Pose with mesh geometry)
-│       └── animations/          # Animation files including Neutral.glb (skeleton-only)
+│   └── models/
+│       └── animations/          # 3D Models & Animations (GLB files)
+│           ├── Neutral_Model.glb # Base mannequin (Anatomical neutral pose with mesh)
+│           └── *.glb            # Animation files (Walk, Stand, Sit, etc.)
 ├── src/
 │   ├── components/
 │   │   └── viewer/              # 3D viewer components

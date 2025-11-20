@@ -46,7 +46,6 @@ export function useBoneInteraction({
   skinnedMesh,
   ikSolver,
   ikTargets,
-  // jointHandleBones,
   enabled,
   isReady,
   showDebugInfo,
@@ -65,7 +64,6 @@ export function useBoneInteraction({
   const [highlightedBone, setHighlightedBone] = useState<THREE.Bone | null>(null);
   const [hoverBone, setHoverBone] = useState<THREE.Bone | null>(null);
   const [isShiftHeld, setIsShiftHeld] = useState(false);
-  // const [constraintViolations, setConstraintViolations] = useState(0);
 
   const dragStateRef = useRef<DragState>({
     isDragging: false,
@@ -109,32 +107,6 @@ export function useBoneInteraction({
     }
   }, [hoverBone, isShiftHeld, gl]);
 
-  // Find joint handle at pointer (for Shift+click inspection)
-  /*
-  const findJointHandleAtPointer = useCallback((event: ThreeEvent<PointerEvent>): THREE.Bone | null => {
-    if (!jointHandleBones || jointHandleBones.length === 0) return null;
-    
-    const ray: THREE.Ray | null = (event as any).ray ?? null;
-    if (!ray) return null;
-    
-    const tmpWorld = new THREE.Vector3();
-    let closestJoint: THREE.Bone | null = null;
-    let closestDistance = 0.15; // Slightly larger click radius for joint handles
-    
-    // Check each joint handle
-    jointHandleBones.forEach((bone) => {
-      bone.getWorldPosition(tmpWorld);
-      const d = ray.distanceToPoint(tmpWorld);
-      if (d < closestDistance) {
-        closestDistance = d;
-        closestJoint = bone;
-      }
-    });
-    
-    return closestJoint;
-  }, [jointHandleBones]);
-  */
-  
   // Find IK target at pointer (raycast against target spheres, not bones)
   const findTargetAtPointer = useCallback((event: ThreeEvent<PointerEvent>): { target: THREE.Bone; chainName: string } | null => {
     if (!ikTargets || ikTargets.size === 0) return null;

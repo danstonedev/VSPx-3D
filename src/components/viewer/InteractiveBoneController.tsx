@@ -207,7 +207,6 @@ ${formatPoseDeltas(deltas)}`);
     setHighlightedBone,
     hoverBone,
     isShiftHeld,
-    // constraintViolations,
     handlers
   } = useBoneInteraction({
     skeleton,
@@ -566,8 +565,6 @@ ${formatPoseDeltas(deltas)}`);
       // Calling update() here would try to solve IK with targets at current positions = no-op or worse
       
       setHighlightedBone(null);
-      // setHoverBone(null); // Handled by hook
-      // setConstraintViolations(0); // Handled by hook
       onBoneSelect?.(null);
       onConstraintViolation?.([]);
       console.log('🔄 Reset to bind pose (snapshot)');
@@ -707,9 +704,6 @@ ${formatPoseDeltas(deltas)}`);
             <div className="ik-controller-debug__header">🎮 Interactive Bone Controller</div>
             <div className="ik-controller-debug__status">Status: {isReady ? '✅ Ready' : '⏳ Loading'}</div>
             <div className="ik-controller-debug__status">Mode: {dragStateRef.current.isDragging ? '🖱️ Dragging' : '⏸️ Idle'}</div>
-            {/* constraintViolations > 0 && (
-              <div className="ik-controller-debug__violations">⚠️ Violations: {constraintViolations}</div>
-            ) */}
             {highlightedBone && (
               <>
                 <div className="ik-controller-debug__selected">
