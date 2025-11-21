@@ -67,8 +67,8 @@ export function useAnimationClips(): LoadedAnimations {
                // Apply procedural rotations for arms down (Anatomical Neutral)
                // Mixamo T-pose has arms along X axis. We need them along -Y.
                if (bone.name === 'mixamorig1LeftArm') {
-                 // Rotate -85 degrees around X (Left arm down - corrected axis)
-                 quaternion.multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), THREE.MathUtils.degToRad(-85)));
+                 // Rotate +85 degrees around X (Left arm down - corrected direction)
+                 quaternion.multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), THREE.MathUtils.degToRad(85)));
                }
                if (bone.name === 'mixamorig1RightArm') {
                  // Rotate +85 degrees around X (Right arm down - corrected axis)
