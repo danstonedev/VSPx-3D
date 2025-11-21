@@ -24,6 +24,7 @@ import { useViewerDispatch, useViewerSelector } from './state/viewerState';
 import { captureJointNeutralPose, clearJointNeutralPose } from './biomech/jointAngles';
 import { BiomechState } from '../../biomech/engine/biomechState';
 import { useCoordinateEngine } from './utils/debugFlags';
+import { loadNeutralPose } from './constraints/neutralPoseLoader';
 
 import { capturePoseSnapshot, diffPoseSnapshots, formatPoseDeltas, type PoseSnapshot } from './utils/skeletonDiagnostics';
 import { useBoneInteraction } from './hooks/useBoneInteraction';
@@ -311,24 +312,25 @@ ${formatPoseDeltas(deltas)}`);
 
     const initializeController = async () => {
       try {
-        // SUCCESS: Neutral_Model.glb contains BOTH mesh geometry AND anatomical neutral pose
-        // The skeleton is already in the correct calibration pose - no transform needed!
+        // Load the True Neutral Pose from file
+        // This ensures we have the correct anatomical reference regardless of the visual mesh's bind pose
+        console.log('📥 Loading Anatomical Neutral Pose from file...');
+        const neutralPoseMap = await loadNeutralPose();
 
-        console.log('📸 Capturing Anatomical Neutral Pose (base model is Neutral_Model.glb)...');
+        console.log('📸 Capturing Bind Pose (Visual Reference)...');
 
-        // Capture current skeleton state as bind pose
+        // Capture current skeleton state as bind pose for the visual mesh
         skeleton.bones.forEach((bone) => {
           bindPoseRef.current.set(bone.uuid, {
             position: bone.position.clone(),
-            quaternion: bone.quaternion.clone(), // Already in Neutral!
+            quaternion: bone.quaternion.clone(),
             scale: bone.scale.clone()
           });
         });
 
-        console.log('✅ Controller initialized with Anatomical Neutral Pose (from Neutral_Model.glb)');
+        console.log('✅ Controller initialized');
 
-        // Capture biomech neutral pose for joint coordinate systems
-        console.log('🔬 Capturing biomech neutral pose for joint coordinate systems...');
+        // Capture legacy biomech neutral pose (for backward compatibility)
         captureJointNeutralPose(skeleton);
 
         // Phase 2: Initialize coordinate engine if enabled
@@ -340,8 +342,10 @@ ${formatPoseDeltas(deltas)}`);
           if (initResult.success) {
             dispatch({ type: 'ik/setBiomechState', biomechState: biomechStateRef.current });
 
-            // Calibrate immediately since we are now in Neutral Pose
-            const calibResult = biomechStateRef.current.calibrateNeutral('Neutral_Model.glb (File)');
+            // Calibrate using the EXPLICIT neutral pose map
+            // This ensures 0 degrees = Anatomical Neutral, even if the mesh is in T-pose
+            const calibResult = biomechStateRef.current.setNeutralPose(neutralPoseMap, 'Neutral_Model.glb');
+            
             if (calibResult.success) {
               setCalibrationVersion(v => v + 1);
             }
@@ -352,7 +356,7 @@ ${formatPoseDeltas(deltas)}`);
 
       } catch (err) {
         console.error('❌ Failed to load Neutral Pose:', err);
-        // Fallback: Capture current state (better than nothing, but might be T-pose or animated)
+        // Fallback: Capture current state
         captureConstraintReferencePose(skeleton);
         setIsReady(true);
       }

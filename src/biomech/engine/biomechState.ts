@@ -211,6 +211,117 @@ export class BiomechState {
   }
 
   /**
+   * Set neutral pose explicitly from a map of local bone rotations
+   * This allows calibrating to a known anatomical pose (e.g. from file)
+   * regardless of the current skeleton pose.
+   * 
+   * @param localRotations - Map of bone names to local quaternions (from Neutral_Model.glb)
+   * @param animationName - Name of the source (e.g. "Neutral_Model.glb")
+   */
+  setNeutralPose(localRotations: Map<string, THREE.Quaternion>, animationName: string = 'Explicit'): CalibrationResult {
+    if (!this.segmentRegistry || !this.skeleton) {
+      return {
+        success: false,
+        jointsCalibratedCount: 0,
+        skippedJoints: [],
+        timestamp: Date.now(),
+        animationName
+      };
+    }
+
+    const startTime = performance.now();
+    const skippedJoints: string[] = [];
+    let jointsCalibratedCount = 0;
+
+    try {
+      // 1. Compute World Quaternions for the provided local rotations
+      // We simulate the skeleton hierarchy without actually moving the bones
+      const worldQuats = new Map<string, THREE.Quaternion>();
+
+      // Helper to traverse and compute world rotations
+      const computeWorld = (bone: THREE.Bone, parentWorld: THREE.Quaternion) => {
+        // Use provided neutral rotation, or fallback to current if missing (shouldn't happen for core bones)
+        const local = localRotations.get(bone.name) || bone.quaternion;
+        
+        // q_world = q_parent_world * q_local
+        const world = parentWorld.clone().multiply(local);
+        worldQuats.set(bone.name, world);
+
+        bone.children.forEach(child => {
+          if (child.isBone) {
+            computeWorld(child as THREE.Bone, world);
+          }
+        });
+      };
+
+      // Start traversal from root
+      // We assume the Armature (root parent) orientation is constant/identity for the neutral pose context
+      // OR we use the current Armature orientation to ensure alignment
+      const rootBone = this.skeleton.bones[0]; // Usually Hips
+      if (!rootBone) throw new Error('Skeleton has no bones');
+
+      const rootParent = rootBone.parent;
+      const rootParentWorld = new THREE.Quaternion();
+      if (rootParent) {
+        rootParent.getWorldQuaternion(rootParentWorld);
+      }
+
+      computeWorld(rootBone, rootParentWorld);
+
+      // 2. Compute q_neutral for each joint using the simulated world rotations
+      const allJoints = getAllJoints();
+      for (const joint of allJoints) {
+        const parentBone = this.segmentRegistry.getBone(joint.parentSegment);
+        const childBone = this.segmentRegistry.getBone(joint.childSegment);
+
+        if (!parentBone || !childBone) {
+          skippedJoints.push(joint.id);
+          continue;
+        }
+
+        const qParentWorld = worldQuats.get(parentBone.name);
+        const qChildWorld = worldQuats.get(childBone.name);
+
+        if (!qParentWorld || !qChildWorld) {
+          skippedJoints.push(joint.id);
+          continue;
+        }
+
+        // q_neutral = q_parent_world^-1 * q_child_world
+        const qNeutral = qParentWorld.clone().invert().multiply(qChildWorld);
+        this.neutralPose.set(joint.id, qNeutral);
+        jointsCalibratedCount++;
+      }
+
+      this.calibrated = true;
+      const calibTime = performance.now() - startTime;
+
+      console.log(
+        `✅ Neutral pose explicitly set: ${jointsCalibratedCount}/${allJoints.length} joints in ${calibTime.toFixed(2)}ms`,
+        `(${animationName})`
+      );
+
+      return {
+        success: true,
+        jointsCalibratedCount,
+        skippedJoints,
+        timestamp: Date.now(),
+        animationName
+      };
+
+    } catch (error) {
+      console.error('❌ Explicit neutral pose setting failed:', error);
+      return {
+        success: false,
+        jointsCalibratedCount,
+        skippedJoints,
+        timestamp: Date.now(),
+        animationName
+      };
+    }
+  }
+
+  /**
    * Update joint states from current skeleton pose
    * Should be called every animation frame
    * 
