@@ -92,10 +92,10 @@ export async function loadNeutralPose(): Promise<Map<string, THREE.Quaternion>> 
           // PROCEDURAL NEUTRAL POSE OVERRIDE
           // Ensure arms are down (Anatomical Neutral) regardless of file state
           if (bone.name === 'mixamorig1LeftArm') {
-             quaternion.multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), THREE.MathUtils.degToRad(85)));
+             quaternion.multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), THREE.MathUtils.degToRad(-85)));
           }
           if (bone.name === 'mixamorig1RightArm') {
-             quaternion.multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), THREE.MathUtils.degToRad(-85)));
+             quaternion.multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), THREE.MathUtils.degToRad(85)));
           }
 
           poseData.set(bone.name, quaternion);
