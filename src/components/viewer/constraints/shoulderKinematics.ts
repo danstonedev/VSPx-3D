@@ -43,7 +43,7 @@ export interface ShoulderKinematics {
  * @param isRightSide - True for right arm, false for left
  * @returns Shoulder kinematics decomposition
  */
-export function analyzeShoulderKinematics(
+export function analyzeShoulderKinematics( // @deprecated LEGACY
   armBone: THREE.Bone,
   isRightSide: boolean = true
 ): ShoulderKinematics {
