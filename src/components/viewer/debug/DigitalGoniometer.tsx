@@ -111,12 +111,6 @@ export function DigitalGoniometer({
     return id.includes('hip');
   }, [jointDef]);
 
-  const isRightHip = useMemo(() => {
-    if (!jointDef) return false;
-    const id = jointDef.id.toLowerCase();
-    return id.includes('hip') && id.includes('right');
-  }, [jointDef]);
-
   const isAnkle = useMemo(() => {
     if (!jointDef) return false;
     const id = jointDef.id.toLowerCase();
@@ -366,7 +360,7 @@ export function DigitalGoniometer({
           rotation={isAnkle ? [0, 0, Math.PI] : [0, 0, 0]}
           getAngle={() => inversions.z ? -anglesRef.current.z : anglesRef.current.z}
           visualOffset={visualOffset} // Dynamic offset based on limb type
-          scale={(isRightHip || isAnkle) ? [-1, 1, 1] : [1, 1, 1]}
+          scale={isAnkle ? [-1, 1, 1] : [1, 1, 1]}
         />
       </group>
 
