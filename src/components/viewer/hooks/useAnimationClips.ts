@@ -74,6 +74,14 @@ export function useAnimationClips(): LoadedAnimations {
                  // Rotate +85 degrees around X (Right arm down - corrected axis)
                  quaternion.multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), THREE.MathUtils.degToRad(85)));
                }
+
+               // Adduct hips 5 degrees (bring legs closer together)
+               if (bone.name === 'mixamorig1LeftUpLeg') {
+                 quaternion.multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), THREE.MathUtils.degToRad(5)));
+               }
+               if (bone.name === 'mixamorig1RightUpLeg') {
+                 quaternion.multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), THREE.MathUtils.degToRad(5)));
+               }
             }
 
             // Create position track (2 identical keyframes for static pose)

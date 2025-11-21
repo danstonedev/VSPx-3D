@@ -98,6 +98,14 @@ export async function loadNeutralPose(): Promise<Map<string, THREE.Quaternion>> 
              quaternion.multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), THREE.MathUtils.degToRad(85)));
           }
 
+          // Adduct hips 5 degrees (bring legs closer together)
+          if (bone.name === 'mixamorig1LeftUpLeg') {
+             quaternion.multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), THREE.MathUtils.degToRad(5)));
+          }
+          if (bone.name === 'mixamorig1RightUpLeg') {
+             quaternion.multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), THREE.MathUtils.degToRad(5)));
+          }
+
           poseData.set(bone.name, quaternion);
         });
 
