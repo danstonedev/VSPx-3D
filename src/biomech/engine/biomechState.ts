@@ -337,7 +337,7 @@ export class BiomechState {
 
   /**
    * Validate and clamp a bone's rotation based on biomechanical constraints
-   * Replaces legacy validateRotation()
+   * Replaces legacy rotation validation
    */
   validateBone(bone: THREE.Bone): void {
     if (!this.segmentRegistry || !this.calibrated) return;

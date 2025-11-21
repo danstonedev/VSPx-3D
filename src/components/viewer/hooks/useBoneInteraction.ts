@@ -318,7 +318,7 @@ export function useBoneInteraction({
         });
 
         if (clampedCount > 0 && showDebugInfo) {
-          // console.log(`✅ Applied constraints to ${clampedCount} bones using validateRotation()`);
+          // console.log(`✅ Applied constraints to ${clampedCount} bones`);
         }
       }
     }
