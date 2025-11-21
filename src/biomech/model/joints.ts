@@ -78,6 +78,17 @@ export const JOINTS: Record<string, JointDef> = {
     side: 'right',
     coordinates: [
       {
+        id: 'gh_r_rotation',
+        jointId: 'gh_right',
+        displayName: 'GH Axial Rotation',
+        axis: 'X', // X-axis is long axis
+        index: 0,
+        neutral: 0,
+        range: { min: -90 * DEG_TO_RAD, max: 90 * DEG_TO_RAD },
+        clamped: true,
+        locked: false,
+      },
+      {
         id: 'gh_r_plane',
         jointId: 'gh_right',
         displayName: 'GH Plane of Elevation',
@@ -99,17 +110,6 @@ export const JOINTS: Record<string, JointDef> = {
         clamped: true,
         locked: false,
         invert: true, // +Z is Down for Right Arm, so invert for Up
-      },
-      {
-        id: 'gh_r_rotation',
-        jointId: 'gh_right',
-        displayName: 'GH Axial Rotation',
-        axis: 'X', // X-axis is long axis
-        index: 0,
-        neutral: 0,
-        range: { min: -90 * DEG_TO_RAD, max: 90 * DEG_TO_RAD },
-        clamped: true,
-        locked: false,
       },
     ],
   },
@@ -173,6 +173,17 @@ export const JOINTS: Record<string, JointDef> = {
     side: 'left',
     coordinates: [
       {
+        id: 'gh_l_rotation',
+        jointId: 'gh_left',
+        displayName: 'GH Axial Rotation',
+        axis: 'X', // X-axis is long axis
+        index: 0,
+        neutral: 0,
+        range: { min: -90 * DEG_TO_RAD, max: 90 * DEG_TO_RAD },
+        clamped: true,
+        locked: false,
+      },
+      {
         id: 'gh_l_plane',
         jointId: 'gh_left',
         displayName: 'GH Plane of Elevation',
@@ -195,17 +206,6 @@ export const JOINTS: Record<string, JointDef> = {
         clamped: true,
         locked: false,
         invert: false, // Check sign for Left
-      },
-      {
-        id: 'gh_l_rotation',
-        jointId: 'gh_left',
-        displayName: 'GH Axial Rotation',
-        axis: 'X', // X-axis is long axis
-        index: 0,
-        neutral: 0,
-        range: { min: -90 * DEG_TO_RAD, max: 90 * DEG_TO_RAD },
-        clamped: true,
-        locked: false,
       },
     ],
   },

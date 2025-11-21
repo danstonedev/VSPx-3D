@@ -45,11 +45,15 @@ export const DIAGNOSTIC_BONES = [
 
 export const SHOULDER_COORD_IDS = {
   right: {
-    gh: ['gh_r_flexion', 'gh_r_abduction', 'gh_r_rotation'] as const,
+    // Order must match joints.ts indices: [0: Rotation, 1: Plane, 2: Elevation]
+    gh: ['gh_r_rotation', 'gh_r_plane', 'gh_r_elevation'] as const,
+    // Order must match joints.ts indices: [0: Tilt, 1: Rotation, 2: Upward]
     st: ['st_r_tilt', 'st_r_rotation', 'st_r_upward'] as const,
   },
   left: {
-    gh: ['gh_l_flexion', 'gh_l_abduction', 'gh_l_rotation'] as const,
+    // Order must match joints.ts indices: [0: Rotation, 1: Plane, 2: Elevation]
+    gh: ['gh_l_rotation', 'gh_l_plane', 'gh_l_elevation'] as const,
+    // Order must match joints.ts indices: [0: Tilt, 1: Rotation, 2: Upward]
     st: ['st_l_tilt', 'st_l_rotation', 'st_l_upward'] as const,
   },
 };

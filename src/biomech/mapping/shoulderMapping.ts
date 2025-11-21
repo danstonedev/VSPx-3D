@@ -28,32 +28,32 @@ const RAD_TO_DEG = 180 / Math.PI;
 /**
  * Map Glenohumeral (GH) coordinates to clinical angles
  * 
- * @param q0 - GH elevation (X axis, radians)
- * @param q1 - GH plane of elevation (Y axis, radians)
- * @param q2 - GH axial rotation (Z axis, radians)
+ * @param rotationRad - GH axial rotation (X axis, radians) [Index 0]
+ * @param planeRad - GH plane of elevation (Y axis, radians) [Index 1]
+ * @param elevationRad - GH elevation (Z axis, radians) [Index 2]
  * @returns Clinical interpretation in degrees
  */
 export function ghToClinical(
-  q0: number,
-  q1: number,
-  q2: number
+  rotationRad: number,
+  planeRad: number,
+  elevationRad: number
 ): ClinicalAngles {
   return {
     jointId: 'gh',
     angles: {
-      elevation: q0 * RAD_TO_DEG,
-      plane: q1 * RAD_TO_DEG,
-      rotation: q2 * RAD_TO_DEG,
+      elevation: elevationRad * RAD_TO_DEG,
+      plane: planeRad * RAD_TO_DEG,
+      rotation: rotationRad * RAD_TO_DEG,
     },
     metrics: {
       // Total elevation magnitude (useful for ROM assessment)
-      totalElevation: q0 * RAD_TO_DEG,
+      totalElevation: elevationRad * RAD_TO_DEG,
       
       // Classify plane of elevation
       // -90 to -30: Adduction (code: -1)
       // -30 to 30: Scapular plane/optimal (code: 0)
       // 30 to 90: Abduction/Frontal plane (code: 1)
-      planeClassification: classifyElevationPlaneCode(q1 * RAD_TO_DEG),
+      planeClassification: classifyElevationPlaneCode(planeRad * RAD_TO_DEG),
     },
   };
 }
@@ -61,26 +61,26 @@ export function ghToClinical(
 /**
  * Map Scapulothoracic (ST) coordinates to clinical angles
  * 
- * @param q0 - ST tilt (X axis, radians)
- * @param q1 - ST internal/external rotation (Y axis, radians)
- * @param q2 - ST upward/downward rotation (Z axis, radians)
+ * @param tiltRad - ST tilt (X axis, radians) [Index 0]
+ * @param rotationRad - ST internal/external rotation (Y axis, radians) [Index 1]
+ * @param upwardRad - ST upward/downward rotation (Z axis, radians) [Index 2]
  * @returns Clinical interpretation in degrees
  */
 export function stToClinical(
-  q0: number,
-  q1: number,
-  q2: number
+  tiltRad: number,
+  rotationRad: number,
+  upwardRad: number
 ): ClinicalAngles {
   return {
     jointId: 'st',
     angles: {
-      tilt: q0 * RAD_TO_DEG,
-      internalRotation: q1 * RAD_TO_DEG,
-      upwardRotation: q2 * RAD_TO_DEG,
+      tilt: tiltRad * RAD_TO_DEG,
+      internalRotation: rotationRad * RAD_TO_DEG,
+      upwardRotation: upwardRad * RAD_TO_DEG,
     },
     metrics: {
       // Total scapular contribution
-      totalSTMotion: Math.sqrt(q0 * q0 + q1 * q1 + q2 * q2) * RAD_TO_DEG,
+      totalSTMotion: Math.sqrt(tiltRad * tiltRad + rotationRad * rotationRad + upwardRad * upwardRad) * RAD_TO_DEG,
     },
   };
 }
