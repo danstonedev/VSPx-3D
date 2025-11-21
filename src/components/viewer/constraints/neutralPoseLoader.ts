@@ -87,7 +87,18 @@ export async function loadNeutralPose(): Promise<Map<string, THREE.Quaternion>> 
 
         // Store each bone's rotation in neutral pose
         skeleton.bones.forEach(bone => {
-          poseData.set(bone.name, bone.quaternion.clone());
+          const quaternion = bone.quaternion.clone();
+
+          // PROCEDURAL NEUTRAL POSE OVERRIDE
+          // Ensure arms are down (Anatomical Neutral) regardless of file state
+          if (bone.name === 'mixamorig1LeftArm') {
+             quaternion.multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), THREE.MathUtils.degToRad(-85)));
+          }
+          if (bone.name === 'mixamorig1RightArm') {
+             quaternion.multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), THREE.MathUtils.degToRad(85)));
+          }
+
+          poseData.set(bone.name, quaternion);
         });
 
         console.log(`✅ Loaded Neutral Position reference (${poseData.size} bones)`);

@@ -52,14 +52,37 @@ export function useAnimationClips(): LoadedAnimations {
           // Create animation tracks from the current bone poses
           const tracks: THREE.KeyframeTrack[] = []
           const bones = (skeleton as THREE.Skeleton).bones
+
+          // PROCEDURAL NEUTRAL POSE OVERRIDE
+          // If this is the Neutral Model and it has no animations, we assume it's in T-pose.
+          // We must procedurally rotate the arms down to create a true Anatomical Neutral pose.
+          const isNeutralModel = spec.id.includes('Neutral_Model');
+
           bones.forEach((bone: THREE.Bone) => {
+            const position = bone.position.clone();
+            const quaternion = bone.quaternion.clone();
+            const scale = bone.scale.clone();
+
+            if (isNeutralModel) {
+               // Apply procedural rotations for arms down (Anatomical Neutral)
+               // Mixamo T-pose has arms along X axis. We need them along -Y.
+               if (bone.name === 'mixamorig1LeftArm') {
+                 // Rotate -85 degrees around Z (Left arm down)
+                 quaternion.multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), THREE.MathUtils.degToRad(-85)));
+               }
+               if (bone.name === 'mixamorig1RightArm') {
+                 // Rotate +85 degrees around Z (Right arm down)
+                 quaternion.multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), THREE.MathUtils.degToRad(85)));
+               }
+            }
+
             // Create position track (2 identical keyframes for static pose)
             const posTrack = new THREE.VectorKeyframeTrack(
               `${bone.name}.position`,
               [0, 0.1], // times: frame 0 and 0.1 seconds
               [
-                bone.position.x, bone.position.y, bone.position.z,
-                bone.position.x, bone.position.y, bone.position.z
+                position.x, position.y, position.z,
+                position.x, position.y, position.z
               ]
             )
             tracks.push(posTrack)
@@ -69,8 +92,8 @@ export function useAnimationClips(): LoadedAnimations {
               `${bone.name}.quaternion`,
               [0, 0.1],
               [
-                bone.quaternion.x, bone.quaternion.y, bone.quaternion.z, bone.quaternion.w,
-                bone.quaternion.x, bone.quaternion.y, bone.quaternion.z, bone.quaternion.w
+                quaternion.x, quaternion.y, quaternion.z, quaternion.w,
+                quaternion.x, quaternion.y, quaternion.z, quaternion.w
               ]
             )
             tracks.push(rotTrack)
@@ -80,8 +103,8 @@ export function useAnimationClips(): LoadedAnimations {
               `${bone.name}.scale`,
               [0, 0.1],
               [
-                bone.scale.x, bone.scale.y, bone.scale.z,
-                bone.scale.x, bone.scale.y, bone.scale.z
+                scale.x, scale.y, scale.z,
+                scale.x, scale.y, scale.z
               ]
             )
             tracks.push(scaleTrack)
