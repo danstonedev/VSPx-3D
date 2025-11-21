@@ -92,8 +92,8 @@ export function DigitalGoniometer({
   const isUpperExtremity = useMemo(() => {
     if (!jointDef) return false;
     const id = jointDef.id.toLowerCase();
-    return id.includes('shoulder') || 
-           id.includes('elbow') || 
+    // Exclude elbow from "Upper Extremity" 0-offset group because it aligns with Y-axis (like legs)
+    return (id.includes('shoulder') || 
            id.includes('wrist') || 
            id.includes('hand') ||
            id.includes('thumb') ||
@@ -102,15 +102,62 @@ export function DigitalGoniometer({
            id.includes('ring') ||
            id.includes('pinky') ||
            id.includes('gh_') ||
-           id.includes('st_');
+           id.includes('st_')) && !id.includes('elbow');
   }, [jointDef]);
 
+  const isHip = useMemo(() => {
+    if (!jointDef) return false;
+    const id = jointDef.id.toLowerCase();
+    return id.includes('hip');
+  }, [jointDef]);
+
+  const isRightHip = useMemo(() => {
+    if (!jointDef) return false;
+    const id = jointDef.id.toLowerCase();
+    return id.includes('hip') && id.includes('right');
+  }, [jointDef]);
+
+  const isAnkle = useMemo(() => {
+    if (!jointDef) return false;
+    const id = jointDef.id.toLowerCase();
+    return id.includes('ankle');
+  }, [jointDef]);
+
+  const isShoulder = useMemo(() => {
+    if (!jointDef) return false;
+    const id = jointDef.id.toLowerCase();
+    return id.includes('shoulder') || id.includes('gh_') || id.includes('st_');
+  }, [jointDef]);
+
+  const isElbow = useMemo(() => {
+    if (!jointDef) return false;
+    const id = jointDef.id.toLowerCase();
+    return id.includes('elbow');
+  }, [jointDef]);
+
+  // Check for inversion flags to ensure visual arm follows physical bone movement
+  // even when the displayed value is inverted for clinical correctness
+  const inversions = useMemo(() => ({
+    x: jointDef?.coordinates.find(c => c.axis === 'X')?.invert ?? false,
+    y: jointDef?.coordinates.find(c => c.axis === 'Y')?.invert ?? false,
+    z: jointDef?.coordinates.find(c => c.axis === 'Z')?.invert ?? false,
+  }), [jointDef]);
+
   const visualOffset = isUpperExtremity ? 0 : 90;
+
+  const useAlternateColors = isShoulder || isElbow;
+
+  // Define colors based on joint type to ensure vertical planes (Flex/Abd) are Red/Blue
+  const colors = {
+    x: useAlternateColors ? 0x0000ff : 0xff0000, // Alt: X=Rot(Blue), Std: X=Flex(Red)
+    y: 0x00ff00,                                 // Alt: Y=Plane(Green), Std: Y=Rot(Green)
+    z: useAlternateColors ? 0xff0000 : 0x0000ff  // Alt: Z=Flex(Red), Std: Z=Abd(Blue)
+  };
 
   // Create materials for each plane
   const materials = useMemo(() => ({
     x: new THREE.MeshBasicMaterial({
-      color: 0xff0000,
+      color: colors.x,
       transparent: true,
       opacity: opacity,
       side: THREE.DoubleSide,
@@ -118,7 +165,7 @@ export function DigitalGoniometer({
       depthWrite: false
     }),
     y: new THREE.MeshBasicMaterial({
-      color: 0x00ff00,
+      color: colors.y,
       transparent: true,
       opacity: opacity,
       side: THREE.DoubleSide,
@@ -126,19 +173,19 @@ export function DigitalGoniometer({
       depthWrite: false
     }),
     z: new THREE.MeshBasicMaterial({
-      color: 0x0000ff,
+      color: colors.z,
       transparent: true,
       opacity: opacity,
       side: THREE.DoubleSide,
       depthTest: false,
       depthWrite: false
     })
-  }), [opacity]);
+  }), [opacity, colors]);
 
   // Create sector materials (more opaque for measured space)
   const sectorMaterials = useMemo(() => ({
     x: new THREE.MeshBasicMaterial({
-      color: 0xff0000,
+      color: colors.x,
       transparent: true,
       opacity: 0.5,
       side: THREE.DoubleSide,
@@ -146,7 +193,7 @@ export function DigitalGoniometer({
       depthWrite: false
     }),
     y: new THREE.MeshBasicMaterial({
-      color: 0x00ff00,
+      color: colors.y,
       transparent: true,
       opacity: 0.5,
       side: THREE.DoubleSide,
@@ -154,64 +201,64 @@ export function DigitalGoniometer({
       depthWrite: false
     }),
     z: new THREE.MeshBasicMaterial({
-      color: 0x0000ff,
+      color: colors.z,
       transparent: true,
       opacity: 0.5,
       side: THREE.DoubleSide,
       depthTest: false,
       depthWrite: false
     })
-  }), []);
+  }), [colors]);
 
   // Create edge materials (thicker, more visible)
   const edgeMaterials = useMemo(() => ({
     x: new THREE.LineBasicMaterial({
-      color: 0xff0000,
+      color: colors.x,
       linewidth: 2,
       transparent: true,
       opacity: 0.8,
       depthTest: false
     }),
     y: new THREE.LineBasicMaterial({
-      color: 0x00ff00,
+      color: colors.y,
       linewidth: 2,
       transparent: true,
       opacity: 0.8,
       depthTest: false
     }),
     z: new THREE.LineBasicMaterial({
-      color: 0x0000ff,
+      color: colors.z,
       linewidth: 2,
       transparent: true,
       opacity: 0.8,
       depthTest: false
     })
-  }), []);
+  }), [colors]);
 
   // Arm materials (indicator arms)
   const armMaterials = useMemo(() => ({
     x: new THREE.LineBasicMaterial({
-      color: 0xff0000,
+      color: colors.x,
       linewidth: 3,
       transparent: true,
       opacity: 1.0,
       depthTest: false
     }),
     y: new THREE.LineBasicMaterial({
-      color: 0x00ff00,
+      color: colors.y,
       linewidth: 3,
       transparent: true,
       opacity: 1.0,
       depthTest: false
     }),
     z: new THREE.LineBasicMaterial({
-      color: 0x0000ff,
+      color: colors.z,
       linewidth: 3,
       transparent: true,
       opacity: 1.0,
       depthTest: false
     })
-  }), []);
+  }), [colors]);
 
   // Update position and rotation each frame
   useFrame(() => {
@@ -232,6 +279,10 @@ export function DigitalGoniometer({
         const parentQuat = new THREE.Quaternion();
         bone.parent.getWorldQuaternion(parentQuat);
         groupRef.current.quaternion.copy(parentQuat);
+
+        if (isHip || isAnkle) {
+          groupRef.current.rotateZ(Math.PI);
+        }
       } else {
         // Fallback for root bone - align with world
         groupRef.current.quaternion.identity();
@@ -241,7 +292,6 @@ export function DigitalGoniometer({
       let x = 0, y = 0, z = 0;
 
       // Priority 1: Use BiomechState if available and calibrated
-      let usedBiomechState = false;
       if (biomechState && biomechState.isCalibrated() && jointDef) {
         const jointState = biomechState.getJointState(jointDef.id);
         if (jointState) {
@@ -253,38 +303,12 @@ export function DigitalGoniometer({
           if (xCoord) x = THREE.MathUtils.radToDeg(jointState.coordinates[xCoord.id]?.value ?? 0);
           if (yCoord) y = THREE.MathUtils.radToDeg(jointState.coordinates[yCoord.id]?.value ?? 0);
           if (zCoord) z = THREE.MathUtils.radToDeg(jointState.coordinates[zCoord.id]?.value ?? 0);
-          usedBiomechState = true;
         }
-      } 
-      
-      // Priority 2: Fallback to local calculation using JointDef
-      if (!usedBiomechState && jointDef) {
-        // Use local rotation and specific Euler order for biomech joints
-        const localQuat = bone.quaternion;
-        const euler = new THREE.Euler().setFromQuaternion(localQuat, jointDef.eulerOrder || 'XYZ');
-        
-        x = THREE.MathUtils.radToDeg(euler.x);
-        y = THREE.MathUtils.radToDeg(euler.y);
-        z = THREE.MathUtils.radToDeg(euler.z);
-
-        // Apply inversions if specified in joint coordinates
-        if (jointDef.coordinates) {
-          const xCoord = jointDef.coordinates.find(c => c.axis === 'X');
-          const yCoord = jointDef.coordinates.find(c => c.axis === 'Y');
-          const zCoord = jointDef.coordinates.find(c => c.axis === 'Z');
-
-          if (xCoord?.invert) x *= -1;
-          if (yCoord?.invert) y *= -1;
-          if (zCoord?.invert) z *= -1;
-        }
-      } else if (!usedBiomechState) {
-        // Priority 3: Fallback to world rotation for non-biomech bones
-        const worldQuat = new THREE.Quaternion();
-        bone.getWorldQuaternion(worldQuat);
-        const euler = new THREE.Euler().setFromQuaternion(worldQuat, 'XYZ');
-        x = THREE.MathUtils.radToDeg(euler.x);
-        y = THREE.MathUtils.radToDeg(euler.y);
-        z = THREE.MathUtils.radToDeg(euler.z);
+      } else {
+        // No valid biomech state - show 0 to indicate "no data" rather than misleading Euler angles
+        x = 0;
+        y = 0;
+        z = 0;
       }
 
       anglesRef.current = { x, y, z };
@@ -313,9 +337,10 @@ export function DigitalGoniometer({
           sectorMaterial={sectorMaterials.x}
           edgeMaterial={edgeMaterials.x}
           armMaterial={armMaterials.x}
-          rotation={[0, Math.PI / 2, 0]}
-          getAngle={() => anglesRef.current.x}
+          rotation={isAnkle ? [0, Math.PI / 2, Math.PI / 2] : [0, Math.PI / 2, 0]}
+          getAngle={() => inversions.x ? -anglesRef.current.x : anglesRef.current.x}
           visualOffset={visualOffset} // Dynamic offset based on limb type
+          scale={isAnkle ? [-1, 1, 1] : isShoulder ? [1, -1, 1] : [1, 1, 1]}
         />
 
         {/* Y-Plane (XZ plane - green) */}
@@ -325,9 +350,10 @@ export function DigitalGoniometer({
           sectorMaterial={sectorMaterials.y}
           edgeMaterial={edgeMaterials.y}
           armMaterial={armMaterials.y}
-          rotation={[Math.PI / 2, 0, 0]}
-          getAngle={() => anglesRef.current.y}
+          rotation={isShoulder ? [Math.PI / 2, 0, Math.PI / 2] : [Math.PI / 2, 0, 0]}
+          getAngle={() => inversions.y ? -anglesRef.current.y : anglesRef.current.y}
           visualOffset={visualOffset} // Dynamic offset based on limb type
+          scale={isHip ? [-1, 1, 1] : isShoulder ? [1, -1, 1] : [1, 1, 1]}
         />
 
         {/* Z-Plane (XY plane - blue) */}
@@ -337,9 +363,10 @@ export function DigitalGoniometer({
           sectorMaterial={sectorMaterials.z}
           edgeMaterial={edgeMaterials.z}
           armMaterial={armMaterials.z}
-          rotation={[0, 0, 0]}
-          getAngle={() => anglesRef.current.z}
+          rotation={isAnkle ? [0, 0, Math.PI] : [0, 0, 0]}
+          getAngle={() => inversions.z ? -anglesRef.current.z : anglesRef.current.z}
           visualOffset={visualOffset} // Dynamic offset based on limb type
+          scale={(isRightHip || isAnkle) ? [-1, 1, 1] : [1, 1, 1]}
         />
       </group>
 
@@ -354,18 +381,29 @@ export function DigitalGoniometer({
           >
             <div className="goniometer-panel">
               <div className="goniometer-header">{jointName}</div>
-              <div className="goniometer-row row-x">
-                <span className="goniometer-label-text">{xLabel}:</span>
-                <span ref={xValueRef} className="goniometer-value-text">0.0°</span>
-              </div>
-              <div className="goniometer-row row-y">
-                <span className="goniometer-label-text">{yLabel}:</span>
-                <span ref={yValueRef} className="goniometer-value-text">0.0°</span>
-              </div>
-              <div className="goniometer-row row-z">
-                <span className="goniometer-label-text">{zLabel}:</span>
-                <span ref={zValueRef} className="goniometer-value-text">0.0°</span>
-              </div>
+              {[
+                { axis: 'x', label: xLabel, ref: xValueRef, color: colors.x },
+                { axis: 'y', label: yLabel, ref: yValueRef, color: colors.y },
+                { axis: 'z', label: zLabel, ref: zValueRef, color: colors.z }
+              ]
+              .sort((a, b) => b.color - a.color) // Sort by color value (Red > Green > Blue) to keep consistent visual order
+              .map((row) => (
+                <div key={row.axis} className={`goniometer-row row-${row.axis}`}>
+                  <span 
+                    className="goniometer-label-text" 
+                    style={{ color: '#' + row.color.toString(16).padStart(6, '0') }}
+                  >
+                    {row.label}:
+                  </span>
+                  <span 
+                    ref={row.ref} 
+                    className="goniometer-value-text"
+                    style={{ color: '#' + row.color.toString(16).padStart(6, '0') }}
+                  >
+                    0.0°
+                  </span>
+                </div>
+              ))}
             </div>
           </Html>
         )}
@@ -383,6 +421,7 @@ interface GoniometerPlaneProps {
   rotation: [number, number, number];
   getAngle: () => number;
   visualOffset?: number; // Offset in degrees to align "0" with bone axis
+  scale?: [number, number, number];
 }
 
 function GoniometerPlane({
@@ -393,7 +432,8 @@ function GoniometerPlane({
   armMaterial,
   rotation,
   getAngle,
-  visualOffset = 0
+  visualOffset = 0,
+  scale = [1, 1, 1]
 }: GoniometerPlaneProps) {
   const groupRef = useRef<THREE.Group>(null);
   const armLineRef = useRef<THREE.Line>(null);
@@ -476,7 +516,8 @@ function GoniometerPlane({
     armLineRef.current.rotation.z = offsetRad + angleRad;
 
     // Update sector geometry
-    const positions = sectorGeometry.attributes.position.array as Float32Array;
+    const positionAttribute = sectorGeometry.attributes.position as THREE.BufferAttribute;
+    const positions = positionAttribute.array as Float32Array;
     const segments = 64;
     
     // Sector spans from visualOffset to visualOffset + angle
@@ -495,13 +536,13 @@ function GoniometerPlane({
       positions[idx + 2] = 0;
     }
     
-    sectorGeometry.attributes.position.needsUpdate = true;
+    positionAttribute.needsUpdate = true;
     // Update draw range to avoid drawing full circle if angle is 0?
     // Actually triangle fan handles 0 area triangles fine (they just don't render)
   });
 
   return (
-    <group ref={groupRef} rotation={rotation}>
+    <group ref={groupRef} rotation={rotation} scale={scale}>
       {/* Transparent circle */}
       <mesh geometry={circleGeometry} material={material} renderOrder={1000} />
       
@@ -511,7 +552,7 @@ function GoniometerPlane({
       {/* Colored edge */}
       <primitive object={edgeLine} renderOrder={1002} />
       
-      {/* Reference arm at 0° (with offset) */}
+      {/* Reference arm at 0 deg (with offset) */}
       <primitive 
         object={referenceArm} 
         rotation={[0, 0, THREE.MathUtils.degToRad(visualOffset)]} 

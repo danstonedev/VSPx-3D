@@ -46,7 +46,7 @@ export const PassiveOrbitControls = forwardRef<OrbitControlsImpl, React.Componen
       }
 
       patchedInstances.add(instance)
-      ;(controlsRef as any).current = instance
+        ; (controlsRef as any).current = instance
     }
 
     useImperativeHandle(ref, () => controlsRef.current!, [])
@@ -57,7 +57,7 @@ export const PassiveOrbitControls = forwardRef<OrbitControlsImpl, React.Componen
       if (!domElement) return
       // Hint browsers not to scroll/zoom the page on touch interactions
       domElement.style.touchAction = 'none'
-      ;(domElement.style as any).msTouchAction = 'none'
+        ; (domElement.style as any).msTouchAction = 'none'
     }, [])
 
     return <OrbitControls ref={attachRef} {...props} />

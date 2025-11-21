@@ -15,7 +15,7 @@
 
 import * as THREE from 'three';
 import { SegmentRegistry } from './segmentRegistry';
-import { 
+import {
   calibrateNeutralPose,
   computeJointState,
   applyCoordinatesToSkeleton
@@ -64,6 +64,7 @@ export class BiomechState {
   private currentState: ModelState = { q: {}, joints: {}, timestamp: 0 };
   private calibrated: boolean = false;
   private lastUpdateTime: number = 0;
+  private boneToJointMap: Map<string, string> = new Map(); // bone.uuid -> jointId
 
   /**
    * Initialize the biomech state from a skeleton
@@ -80,6 +81,7 @@ export class BiomechState {
     try {
       this.skeleton = skeleton;
       this.segmentRegistry = new SegmentRegistry(skeleton);
+      this.boneToJointMap.clear();
 
       // Verify all joint segments can be resolved
       const allJoints = getAllJoints();
@@ -100,6 +102,11 @@ export class BiomechState {
 
         if (parentResolved && childResolved) {
           jointsInitialized++;
+          
+          // Cache bone mapping for fast lookup
+          if (childResolved.type === 'bone') {
+            this.boneToJointMap.set(childResolved.bone.uuid, joint.id);
+          }
         }
       }
 
@@ -116,7 +123,7 @@ export class BiomechState {
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error);
       errors.push(`Initialization failed: ${errorMsg}`);
-      
+
       return {
         success: false,
         segmentCount: 0,
@@ -178,7 +185,7 @@ export class BiomechState {
 
       this.calibrated = true;
       const calibTime = performance.now() - startTime;
-      
+
       console.log(
         `✅ Neutral pose calibrated: ${jointsCalibratedCount}/${allJoints.length} joints in ${calibTime.toFixed(2)}ms`,
         animationName ? `(from ${animationName})` : ''
@@ -237,7 +244,7 @@ export class BiomechState {
         // Compute joint state
         const jointState = computeJointState(joint, this.segmentRegistry, qNeutral);
         if (!jointState) continue;
-        
+
         // Store joint state
         newJoints[joint.id] = jointState;
 
@@ -275,12 +282,12 @@ export class BiomechState {
    * 
    * @param jointId - The joint to modify
    * @param coordinates - The coordinate values [q0, q1, q2] in radians
-   * @param clampToROM - If true, clamp to joint ROM before applying (TODO: implement)
+   * @param clampToROM - If true, clamp to joint ROM before applying
    */
   applyCoordinates(
-    jointId: string, 
+    jointId: string,
     coordinates: [number, number, number],
-    _clampToROM: boolean = false
+    clampToROM: boolean = false
   ): void {
     if (!this.segmentRegistry || !this.skeleton) {
       console.warn('⚠️ Cannot apply coordinates: BiomechState not initialized');
@@ -300,10 +307,66 @@ export class BiomechState {
       return;
     }
 
-    applyCoordinatesToSkeleton(joint, coordinates, qNeutral, this.segmentRegistry);
-    
+    let finalCoordinates = [...coordinates] as [number, number, number];
+
+    if (clampToROM) {
+      // Clamp each coordinate
+      joint.coordinates.forEach((coord) => {
+        // Map index (0,1,2) to the coordinate value
+        let val = finalCoordinates[coord.index];
+        
+        // Handle inversion if needed for checking limits
+        if (coord.invert) val = -val;
+
+        // Clamp
+        if (val < coord.range.min) val = coord.range.min;
+        if (val > coord.range.max) val = coord.range.max;
+
+        // Invert back if needed
+        if (coord.invert) val = -val;
+
+        finalCoordinates[coord.index] = val;
+      });
+    }
+
+    applyCoordinatesToSkeleton(joint, finalCoordinates, qNeutral, this.segmentRegistry);
+
     // Update current state
     // TODO: Update ModelState correctly
+  }
+
+  /**
+   * Validate and clamp a bone's rotation based on biomechanical constraints
+   * Replaces legacy validateRotation()
+   */
+  validateBone(bone: THREE.Bone): void {
+    if (!this.segmentRegistry || !this.calibrated) return;
+
+    const jointId = this.boneToJointMap.get(bone.uuid);
+    if (!jointId) return;
+
+    const joint = getJoint(jointId);
+    if (!joint) return;
+
+    // Get current state (which computes q from current bone rotation)
+    const jointState = this.getJointState(jointId);
+    if (!jointState) return;
+
+    // Extract coordinates and prepare for re-application
+    const coords: [number, number, number] = [0, 0, 0];
+    
+    joint.coordinates.forEach(coord => {
+        const state = jointState.coordinates[coord.id];
+        if (state) {
+            let val = state.value;
+            // Un-invert because applyCoordinates will re-invert
+            if (coord.invert) val = -val;
+            coords[coord.index] = val;
+        }
+    });
+
+    // Apply with clamping enabled
+    this.applyCoordinates(jointId, coords, true);
   }
 
   /**

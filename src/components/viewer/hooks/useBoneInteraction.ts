@@ -7,9 +7,10 @@ import {
   updateIKTarget,
   type IKChainConfig
 } from '../utils/ikSolverConfig';
-import { validateRotation, type ConstraintViolation, getConstraintForBone } from '../constraints/constraintValidator'; // @deprecated - TODO: Migrate to biomechState.computeJointState() in Phase 2
+import { type ConstraintViolation } from '../constraints/constraintValidator';
 import { capturePoseSnapshot, diffPoseSnapshots, type PoseSnapshot } from '../utils/skeletonDiagnostics';
 import { RotationCompensatedIKSolver } from '../utils/RotationCompensatedIKSolver';
+import { BiomechState } from '../../../biomech/engine/biomechState';
 
 export interface DragState {
   isDragging: boolean;
@@ -32,6 +33,7 @@ interface UseBoneInteractionProps {
   constraintsEnabled: boolean;
   ikRestPoseRef: React.MutableRefObject<Map<string, { position: THREE.Vector3; quaternion: THREE.Quaternion; scale: THREE.Vector3 }>>;
   restPoseSnapshotRef: React.MutableRefObject<PoseSnapshot | null>;
+  biomechState: BiomechState | null;
   onBoneSelect?: (bone: THREE.Bone | null) => void;
   onDragStart?: (bone: THREE.Bone, plane: THREE.Plane) => void;
   onDragEnd?: () => void;
@@ -51,6 +53,7 @@ export function useBoneInteraction({
   constraintsEnabled,
   ikRestPoseRef,
   restPoseSnapshotRef,
+  biomechState,
   onBoneSelect,
   onDragStart,
   onDragEnd,
@@ -307,13 +310,10 @@ export function useBoneInteraction({
           const bone = skeleton.bones.find(b => b.name === boneName);
           if (!bone) return;
 
-          const constraint = getConstraintForBone(boneName);
-          if (!constraint) return;
-
-          const result = validateRotation(bone, constraint, showDebugInfo); // @deprecated - TODO: Migrate to biomechState.computeJointState()
-
-          if (result.clamped) {
-            clampedCount++;
+          if (biomechState && biomechState.isCalibrated()) {
+            // Use new biomech engine for validation
+            biomechState.validateBone(bone);
+            // Note: validateBone modifies the bone in place if needed
           }
         });
 
@@ -323,7 +323,7 @@ export function useBoneInteraction({
       }
     }
 
-  }, [ikSolver, skeleton, camera, raycaster, gl, constraintsEnabled, onConstraintViolation, showDebugInfo, skinnedMesh, ikRestPoseRef, restPoseSnapshotRef, logPoseDiagnostics]);
+  }, [ikSolver, skeleton, camera, raycaster, gl, constraintsEnabled, onConstraintViolation, showDebugInfo, skinnedMesh, ikRestPoseRef, restPoseSnapshotRef, logPoseDiagnostics, biomechState]);
 
   // Handle pointer up (end drag)
   const handlePointerUp = useCallback((event: ThreeEvent<PointerEvent>) => {

@@ -50,19 +50,19 @@ export function hasConstraint(boneName: string): boolean {
  */
 export function getLimitsFromJointDef(joint: JointDef): RotationLimits {
   // Default to full range
-  const limits: RotationLimits = { 
-    x: [-Math.PI, Math.PI], 
-    y: [-Math.PI, Math.PI], 
-    z: [-Math.PI, Math.PI] 
+  const limits: RotationLimits = {
+    x: [-Math.PI, Math.PI],
+    y: [-Math.PI, Math.PI],
+    z: [-Math.PI, Math.PI]
   };
-  
+
   joint.coordinates.forEach(coord => {
     const axis = coord.axis.toLowerCase() as 'x' | 'y' | 'z';
     if (coord.clamped) {
-       limits[axis] = [coord.range.min, coord.range.max];
+      limits[axis] = [coord.range.min, coord.range.max];
     }
   });
-  
+
   return limits;
 }
 
@@ -110,7 +110,7 @@ function getRestQuaternion(bone: THREE.Bone): THREE.Quaternion {
     }
     console.warn(`⚠️ No Neutral Position data for ${bone.name}, falling back to captured pose`);
   }
-  
+
   // Fall back to legacy captured pose
   const cached = constraintReferencePose.get(bone.name);
   if (!cached) {
@@ -122,48 +122,6 @@ function getRestQuaternion(bone: THREE.Bone): THREE.Quaternion {
     return currentPose;
   }
   return cached;
-}
-
-/**
- * @deprecated Use qSpaceEngine.computeJointState() from Phase 2 coordinate system instead.
- * Legacy bone-level Euler calculation. New system uses coordinate-level quaternion math.
- * See docs/LEGACY_CODE_CLEANUP.md for migration guide.
- */
-export function getRelativeEuler(bone: THREE.Bone): THREE.Euler {
-  const restQuat = getRestQuaternion(bone);
-  const restInverse = restQuat.clone().invert();
-  // Calculate relative rotation: restInverse * current
-  // Relative rotation represents movement FROM Neutral Position (anatomical zero)
-  // When bone is in Neutral Position: restInverse * neutral = identity = (0,0,0)
-  // IMPORTANT: multiplyQuaternions creates new result, multiply() modifies in-place
-  const relativeQuat = new THREE.Quaternion().multiplyQuaternions(restInverse, bone.quaternion);
-  return new THREE.Euler().setFromQuaternion(relativeQuat, 'XYZ');
-}
-
-/**
- * Get anatomical angles (relative to true anatomical neutral)
- * 
- * Uses the angleConversion module for clear, testable coordinate transformation.
- * Now references Neutral Position (Neutral_Model.glb) as the anatomical zero point.
- * 
- * @param bone - The bone to measure
- * @returns Euler angles in anatomical reference frame (in radians)
- */
-export function getAnatomicalEuler(bone: THREE.Bone): THREE.Euler {
-  const relativeEuler = getRelativeEuler(bone);
-  // In the new system, the Neutral Pose IS the anatomical zero.
-  // So relative rotation from Neutral Pose = Anatomical Angles.
-  return relativeEuler;
-}
-
-export function setRelativeEuler(
-  bone: THREE.Bone,
-  euler: THREE.Euler
-): void {
-  const restQuat = getRestQuaternion(bone);
-  const constrainedQuat = new THREE.Quaternion().setFromEuler(euler);
-  bone.quaternion.copy(restQuat.clone().multiply(constrainedQuat));
-  bone.updateMatrixWorld(true);
 }
 
 export function resetBoneToRest(bone: THREE.Bone): void {
@@ -180,144 +138,6 @@ function clamp(value: number, min: number, max: number): number {
 }
 
 /**
- * Validate and clamp a bone's rotation to its defined constraints
- * 
- * @deprecated Use BiomechState.computeJointState() from Phase 2 coordinate system instead.
- * This legacy bone-level validation uses Euler angles and cannot handle ST+GH shoulder separation.
- * Kept for backward compatibility during migration. See docs/LEGACY_CODE_CLEANUP.md
- * 
- * @param bone - The THREE.Bone to validate
- * @param constraint - The joint constraint to apply (optional, will look up if not provided)
- * @returns Object with validation result and whether changes were made
- */
-export function validateRotation(
-  bone: THREE.Bone,
-  constraint?: JointDef,
-  debug: boolean = false
-): { valid: boolean; clamped: boolean; violations: string[] } {
-  // Look up constraint if not provided
-  if (!constraint) {
-    constraint = getConstraintForBone(bone.name);
-  }
-  
-  // No constraint defined for this bone - allow any rotation
-  if (!constraint) {
-    return { valid: true, clamped: false, violations: [] };
-  }
-  
-  const limits = getLimitsFromJointDef(constraint);
-  const violations: string[] = [];
-  let clamped = false;
-  
-  const restQuat = getRestQuaternion(bone);
-  
-  // Calculate relative quaternion
-  const restInverse = restQuat.clone().invert();
-  const relativeQuat = new THREE.Quaternion().multiplyQuaternions(restInverse, bone.quaternion);
-  
-  // Convert to Euler using the JOINT'S defined order (e.g. ZXY for elbow)
-  // Default to XYZ if not specified (though JointDef usually specifies it)
-  const order = (constraint.eulerOrder || 'XYZ') as THREE.EulerOrder;
-  const euler = new THREE.Euler().setFromQuaternion(relativeQuat, order);
-  
-  // Store original values
-  const originalX = euler.x;
-  const originalY = euler.y;
-  const originalZ = euler.z;
-  
-  if (debug) {
-    console.log(`[validateRotation] ${bone.name} (${order}):`,
-      `X=${(originalX * 180 / Math.PI).toFixed(1)}° [${(limits.x[0] * 180 / Math.PI).toFixed(0)}° to ${(limits.x[1] * 180 / Math.PI).toFixed(0)}°]`,
-      `Y=${(originalY * 180 / Math.PI).toFixed(1)}° [${(limits.y[0] * 180 / Math.PI).toFixed(0)}° to ${(limits.y[1] * 180 / Math.PI).toFixed(0)}°]`,
-      `Z=${(originalZ * 180 / Math.PI).toFixed(1)}° [${(limits.z[0] * 180 / Math.PI).toFixed(0)}° to ${(limits.z[1] * 180 / Math.PI).toFixed(0)}°]`
-    );
-  }
-  
-  // Clamp each axis
-  euler.x = clamp(euler.x, limits.x[0], limits.x[1]);
-  euler.y = clamp(euler.y, limits.y[0], limits.y[1]);
-  euler.z = clamp(euler.z, limits.z[0], limits.z[1]);
-  
-  // Check if any clamping occurred
-  if (Math.abs(euler.x - originalX) > 1e-5) {
-    violations.push(`X: ${originalX.toFixed(3)} → ${euler.x.toFixed(3)}`);
-    clamped = true;
-  }
-  if (Math.abs(euler.y - originalY) > 1e-5) {
-    violations.push(`Y: ${originalY.toFixed(3)} → ${euler.y.toFixed(3)}`);
-    clamped = true;
-  }
-  if (Math.abs(euler.z - originalZ) > 1e-5) {
-    violations.push(`Z: ${originalZ.toFixed(3)} → ${euler.z.toFixed(3)}`);
-    clamped = true;
-  }
-  
-  if (clamped) {
-    const constrainedQuat = new THREE.Quaternion().setFromEuler(euler);
-    bone.quaternion.copy(restQuat.clone().multiply(constrainedQuat));
-    bone.updateMatrixWorld(true);
-  }
-  
-  return {
-    valid: !clamped,
-    clamped,
-    violations
-  };
-}
-
-/**
- * Apply constraints to an entire skeleton
- * 
- * @deprecated Use BiomechState.update() from Phase 2 coordinate system instead.
- * Legacy bone-level constraint application. New system validates at coordinate-level.
- * See docs/LEGACY_CODE_CLEANUP.md for migration guide.
- * 
- * @param skeleton - The THREE.Skeleton to validate
- * @param onlyEnabled - If true, only validate bones with enabled constraints
- * @returns Summary of violations found
- */
-export function applyConstraints(
-  skeleton: THREE.Skeleton,
-  _onlyEnabled: boolean = true
-): {
-  totalBones: number;
-  constrainedBones: number;
-  violationsFound: number;
-  violations: ConstraintViolation[];
-} {
-  const violations: ConstraintViolation[] = [];
-  let constrainedBones = 0;
-  let violationsFound = 0;
-  
-  for (const bone of skeleton.bones) {
-    const constraint = getConstraintForBone(bone.name);
-    
-    if (!constraint) continue;
-    // Note: JointDef doesn't have 'enabled' flag, assuming all defined joints are enabled
-    
-    constrainedBones++;
-    
-    const result = validateRotation(bone, constraint);
-    
-    if (!result.valid) {
-      violationsFound++;
-      violations.push({
-        boneName: bone.name,
-        constraint: constraint.displayName,
-        violations: result.violations
-      });
-    }
-  }
-  
-  return {
-    totalBones: skeleton.bones.length,
-    constrainedBones,
-    violationsFound,
-    violations
-  };
-}
-
-/**
  * Validate a single rotation value against limits without modifying the bone
  * 
  * @param euler - The Euler rotation to check
@@ -329,7 +149,7 @@ export function checkRotationLimits(
   limits: RotationLimits
 ): { valid: boolean; violations: string[] } {
   const violations: string[] = [];
-  
+
   if (euler.x < limits.x[0] || euler.x > limits.x[1]) {
     violations.push(
       `X-axis: ${euler.x.toFixed(3)} outside [${limits.x[0].toFixed(3)}, ${limits.x[1].toFixed(3)}]`
@@ -345,7 +165,7 @@ export function checkRotationLimits(
       `Z-axis: ${euler.z.toFixed(3)} outside [${limits.z[0].toFixed(3)}, ${limits.z[1].toFixed(3)}]`
     );
   }
-  
+
   return {
     valid: violations.length === 0,
     violations
@@ -382,31 +202,31 @@ export function generateConstraintBoundary(
   limits: RotationLimits
 ): THREE.Euler[] {
   const boundary: THREE.Euler[] = [];
-  
+
   // Generate sample points along each axis
   const steps = 8;
-  
+
   // X-axis sweep
   for (let i = 0; i <= steps; i++) {
     const t = i / steps;
     const x = limits.x[0] + t * (limits.x[1] - limits.x[0]);
     boundary.push(new THREE.Euler(x, 0, 0, 'XYZ'));
   }
-  
+
   // Y-axis sweep
   for (let i = 0; i <= steps; i++) {
     const t = i / steps;
     const y = limits.y[0] + t * (limits.y[1] - limits.y[0]);
     boundary.push(new THREE.Euler(0, y, 0, 'XYZ'));
   }
-  
+
   // Z-axis sweep
   for (let i = 0; i <= steps; i++) {
     const t = i / steps;
     const z = limits.z[0] + t * (limits.z[1] - limits.z[0]);
     boundary.push(new THREE.Euler(0, 0, z, 'XYZ'));
   }
-  
+
   return boundary;
 }
 
@@ -425,54 +245,12 @@ export function blendToConstrainedRotation(
 ): void {
   const currentQuat = bone.quaternion.clone();
   const targetQuat = new THREE.Quaternion().setFromEuler(targetRotation);
-  
+
   // Spherical linear interpolation for smooth blending
   currentQuat.slerp(targetQuat, blendFactor);
-  
+
   bone.quaternion.copy(currentQuat);
   bone.updateMatrixWorld(true);
-}
-
-/**
- * Batch validate multiple bones (for performance)
- * Useful when checking an entire IK chain
- * 
- * @param bones - Array of bones to validate
- * @param stopOnFirstViolation - If true, stops at first constraint violation
- * @returns Summary of validation
- */
-export function validateBones(
-  bones: THREE.Bone[],
-  stopOnFirstViolation: boolean = false
-): {
-  allValid: boolean;
-  validatedCount: number;
-  violations: Array<{ boneName: string; violations: string[] }>;
-} {
-  const violations: Array<{ boneName: string; violations: string[] }> = [];
-  let validatedCount = 0;
-  
-  for (const bone of bones) {
-    const result = validateRotation(bone);
-    validatedCount++;
-    
-    if (!result.valid) {
-      violations.push({
-        boneName: bone.name,
-        violations: result.violations
-      });
-      
-      if (stopOnFirstViolation) {
-        break;
-      }
-    }
-  }
-  
-  return {
-    allValid: violations.length === 0,
-    validatedCount,
-    violations
-  };
 }
 
 /**
@@ -490,17 +268,17 @@ export function getConstraintUtilization(
   const xRange = limits.x[1] - limits.x[0];
   const yRange = limits.y[1] - limits.y[0];
   const zRange = limits.z[1] - limits.z[0];
-  
+
   // Calculate how close to limits (0 = at min, 0.5 = center, 1 = at max)
   const xNorm = (euler.x - limits.x[0]) / xRange;
   const yNorm = (euler.y - limits.y[0]) / yRange;
   const zNorm = (euler.z - limits.z[0]) / zRange;
-  
+
   // Convert to utilization percentage (distance from center)
   const xUtil = Math.abs(xNorm - 0.5) * 200; // 0-100%
   const yUtil = Math.abs(yNorm - 0.5) * 200;
   const zUtil = Math.abs(zNorm - 0.5) * 200;
-  
+
   return {
     x: Math.min(100, xUtil),
     y: Math.min(100, yUtil),
@@ -519,12 +297,12 @@ export function resetToNeutral(bone: THREE.Bone, constraint?: JointDef): void {
   if (!constraint) {
     constraint = getConstraintForBone(bone.name);
   }
-  
+
   if (!constraint) return;
-  
+
   const limits = getLimitsFromJointDef(constraint);
   const restQuat = getRestQuaternion(bone);
-  
+
   // Set to middle of each range
   const neutralEuler = new THREE.Euler(
     (limits.x[0] + limits.x[1]) / 2,
@@ -532,7 +310,7 @@ export function resetToNeutral(bone: THREE.Bone, constraint?: JointDef): void {
     (limits.z[0] + limits.z[1]) / 2,
     (constraint.eulerOrder || 'XYZ') as THREE.EulerOrder
   );
-  
+
   const delta = new THREE.Quaternion().setFromEuler(neutralEuler);
   bone.quaternion.copy(restQuat.clone().multiply(delta));
   bone.updateMatrixWorld(true);

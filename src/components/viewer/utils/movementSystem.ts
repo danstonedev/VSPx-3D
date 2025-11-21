@@ -1,5 +1,6 @@
 import * as THREE from 'three'
 import { animationDebug, animationError, animationWarn } from '../../../shared/utils/animationLogging'
+import { SKELETON_MAP } from './skeletonMap'
 
 export interface Movement {
   name: string
@@ -238,105 +239,99 @@ export class MovementController {
     this.model.traverse(child => {
       if (child instanceof THREE.Bone) {
         const name = child.name
-        
-        // Map Mixamo bones - they use "mixamorig" prefix with numbers
-        if (name.toLowerCase().includes('mixamorig')) {
-          // Remove the mixamorig prefix and number for cleaner mapping
-          const cleanName = name.replace(/mixamorig\d*/i, '')
-          
-          // Core bones
-          if (cleanName === 'Hips') {
-            this.boneMap.set('hips', child)
-            foundBones.push({ original: name, mapped: 'hips' })
-          }
-          if (cleanName === 'Spine') {
-            this.boneMap.set('spine', child)
-            foundBones.push({ original: name, mapped: 'spine' })
-          }
-          if (cleanName === 'Spine1') {
-            this.boneMap.set('spine1', child)
-            foundBones.push({ original: name, mapped: 'spine1' })
-          }
-          if (cleanName === 'Spine2') {
-            this.boneMap.set('chest', child)
-            foundBones.push({ original: name, mapped: 'chest' })
-          }
-          if (cleanName === 'Neck') {
-            this.boneMap.set('neck', child)
-            foundBones.push({ original: name, mapped: 'neck' })
-          }
-          if (cleanName === 'Head') {
-            this.boneMap.set('head', child)
-            foundBones.push({ original: name, mapped: 'head' })
-          }
-          
-          // Left arm
-          if (cleanName === 'LeftShoulder') {
-            this.boneMap.set('leftShoulder', child)
-            foundBones.push({ original: name, mapped: 'leftShoulder' })
-          }
-          if (cleanName === 'LeftArm') {
-            this.boneMap.set('leftUpperArm', child)
-            foundBones.push({ original: name, mapped: 'leftUpperArm' })
-          }
-          if (cleanName === 'LeftForeArm') {
-            this.boneMap.set('leftLowerArm', child)
-            foundBones.push({ original: name, mapped: 'leftLowerArm' })
-          }
-          if (cleanName === 'LeftHand') {
-            this.boneMap.set('leftHand', child)
-            foundBones.push({ original: name, mapped: 'leftHand' })
-          }
-          
-          // Right arm
-          if (cleanName === 'RightShoulder') {
-            this.boneMap.set('rightShoulder', child)
-            foundBones.push({ original: name, mapped: 'rightShoulder' })
-          }
-          if (cleanName === 'RightArm') {
-            this.boneMap.set('rightUpperArm', child)
-            foundBones.push({ original: name, mapped: 'rightUpperArm' })
-          }
-          if (cleanName === 'RightForeArm') {
-            this.boneMap.set('rightLowerArm', child)
-            foundBones.push({ original: name, mapped: 'rightLowerArm' })
-          }
-          if (cleanName === 'RightHand') {
-            this.boneMap.set('rightHand', child)
-            foundBones.push({ original: name, mapped: 'rightHand' })
-          }
-          
-          // Left leg
-          if (cleanName === 'LeftUpLeg') {
-            this.boneMap.set('leftUpperLeg', child)
-            foundBones.push({ original: name, mapped: 'leftUpperLeg' })
-          }
-          if (cleanName === 'LeftLeg') {
-            this.boneMap.set('leftLowerLeg', child)
-            foundBones.push({ original: name, mapped: 'leftLowerLeg' })
-          }
-          if (cleanName === 'LeftFoot') {
-            this.boneMap.set('leftFoot', child)
-            foundBones.push({ original: name, mapped: 'leftFoot' })
-          }
-          
-          // Right leg
-          if (cleanName === 'RightUpLeg') {
-            this.boneMap.set('rightUpperLeg', child)
-            foundBones.push({ original: name, mapped: 'rightUpperLeg' })
-          }
-          if (cleanName === 'RightLeg') {
-            this.boneMap.set('rightLowerLeg', child)
-            foundBones.push({ original: name, mapped: 'rightLowerLeg' })
-          }
-          if (cleanName === 'RightFoot') {
-            this.boneMap.set('rightFoot', child)
-            foundBones.push({ original: name, mapped: 'rightFoot' })
-          }
+
+        // Map using SKELETON_MAP for consistency
+        if (name === SKELETON_MAP.Hips) {
+          this.boneMap.set('hips', child)
+          foundBones.push({ original: name, mapped: 'hips' })
+        }
+        if (name === SKELETON_MAP.Spine) {
+          this.boneMap.set('spine', child)
+          foundBones.push({ original: name, mapped: 'spine' })
+        }
+        if (name === SKELETON_MAP.Spine1) {
+          this.boneMap.set('spine1', child)
+          foundBones.push({ original: name, mapped: 'spine1' })
+        }
+        if (name === SKELETON_MAP.Spine2) {
+          this.boneMap.set('chest', child)
+          foundBones.push({ original: name, mapped: 'chest' })
+        }
+        if (name === SKELETON_MAP.Neck) {
+          this.boneMap.set('neck', child)
+          foundBones.push({ original: name, mapped: 'neck' })
+        }
+        if (name === SKELETON_MAP.Head) {
+          this.boneMap.set('head', child)
+          foundBones.push({ original: name, mapped: 'head' })
+        }
+
+        // Left arm
+        if (name === SKELETON_MAP.LeftShoulder) {
+          this.boneMap.set('leftShoulder', child)
+          foundBones.push({ original: name, mapped: 'leftShoulder' })
+        }
+        if (name === SKELETON_MAP.LeftArm) {
+          this.boneMap.set('leftUpperArm', child)
+          foundBones.push({ original: name, mapped: 'leftUpperArm' })
+        }
+        if (name === SKELETON_MAP.LeftForeArm) {
+          this.boneMap.set('leftLowerArm', child)
+          foundBones.push({ original: name, mapped: 'leftLowerArm' })
+        }
+        if (name === SKELETON_MAP.LeftHand) {
+          this.boneMap.set('leftHand', child)
+          foundBones.push({ original: name, mapped: 'leftHand' })
+        }
+
+        // Right arm
+        if (name === SKELETON_MAP.RightShoulder) {
+          this.boneMap.set('rightShoulder', child)
+          foundBones.push({ original: name, mapped: 'rightShoulder' })
+        }
+        if (name === SKELETON_MAP.RightArm) {
+          this.boneMap.set('rightUpperArm', child)
+          foundBones.push({ original: name, mapped: 'rightUpperArm' })
+        }
+        if (name === SKELETON_MAP.RightForeArm) {
+          this.boneMap.set('rightLowerArm', child)
+          foundBones.push({ original: name, mapped: 'rightLowerArm' })
+        }
+        if (name === SKELETON_MAP.RightHand) {
+          this.boneMap.set('rightHand', child)
+          foundBones.push({ original: name, mapped: 'rightHand' })
+        }
+
+        // Left leg
+        if (name === SKELETON_MAP.LeftUpLeg) {
+          this.boneMap.set('leftUpperLeg', child)
+          foundBones.push({ original: name, mapped: 'leftUpperLeg' })
+        }
+        if (name === SKELETON_MAP.LeftLeg) {
+          this.boneMap.set('leftLowerLeg', child)
+          foundBones.push({ original: name, mapped: 'leftLowerLeg' })
+        }
+        if (name === SKELETON_MAP.LeftFoot) {
+          this.boneMap.set('leftFoot', child)
+          foundBones.push({ original: name, mapped: 'leftFoot' })
+        }
+
+        // Right leg
+        if (name === SKELETON_MAP.RightUpLeg) {
+          this.boneMap.set('rightUpperLeg', child)
+          foundBones.push({ original: name, mapped: 'rightUpperLeg' })
+        }
+        if (name === SKELETON_MAP.RightLeg) {
+          this.boneMap.set('rightLowerLeg', child)
+          foundBones.push({ original: name, mapped: 'rightLowerLeg' })
+        }
+        if (name === SKELETON_MAP.RightFoot) {
+          this.boneMap.set('rightFoot', child)
+          foundBones.push({ original: name, mapped: 'rightFoot' })
         }
       }
     })
-    
+
     // debug logs removed
   }
 
@@ -349,7 +344,7 @@ export class MovementController {
     }
   ) {
     // debug logs removed
-    
+
     const movement = MovementLibrary.getMovement(movementName)
     if (!movement) {
       animationError('Movement not found', { movementName })
@@ -358,14 +353,14 @@ export class MovementController {
 
     const clip = this.createAnimationClip(movement)
     // debug logs removed
-    
+
     if (clip.tracks.length === 0) {
       animationError('No animation tracks generated for clip', { movementName: movement.name })
       return
     }
-    
+
     const action = this.mixer.clipAction(clip)
-    
+
     if (movement.loop) {
       action.setLoop(THREE.LoopRepeat, Infinity)
     } else {
@@ -381,7 +376,7 @@ export class MovementController {
     action.reset()
     action.fadeIn(options?.fadeIn ?? 0.5)
     action.play()
-    
+
     this.currentAction = action
     this.isPlaying = true
     // debug logs removed
@@ -458,7 +453,7 @@ export class MovementController {
 
       // CRITICAL FIX: Use the actual bone name, not the mapped name
       const boneName = bone.name // This should be like "mixamorig1RightArm"
-      
+
       if (hasRotation) {
         animationDebug('Creating rotation track for bone', boneName)
         tracks.push(new THREE.QuaternionKeyframeTrack(`${boneName}.quaternion`, times, rotationValues))
@@ -492,7 +487,7 @@ export class MovementController {
   }
 
   stop() {
-  animationDebug('Stopping animation playback')
+    animationDebug('Stopping animation playback')
     if (this.currentAction) {
       this.currentAction.stop()
       this.currentAction = null

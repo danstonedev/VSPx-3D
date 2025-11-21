@@ -1,4 +1,5 @@
 import * as THREE from 'three'
+import { SKELETON_MAP } from './skeletonMap'
 
 /**
  * Bone rotation definition (in radians)
@@ -25,15 +26,15 @@ export const POSE_LIBRARY: Record<string, Pose> = {
     name: 'Neutral',
     description: 'Standing relaxed, arms at sides',
     bones: {
-      mixamorig1Spine: { rotation: { x: 0, y: 0, z: 0 } },
-      mixamorig1Spine1: { rotation: { x: 0, y: 0, z: 0 } },
-      mixamorig1Spine2: { rotation: { x: 0, y: 0, z: 0 } },
-      mixamorig1Neck: { rotation: { x: 0, y: 0, z: 0 } },
-      mixamorig1Head: { rotation: { x: 0, y: 0, z: 0 } },
-      mixamorig1LeftArm: { rotation: { x: 0, y: 0, z: -0.2 } },
-      mixamorig1RightArm: { rotation: { x: 0, y: 0, z: 0.2 } },
-      mixamorig1LeftUpLeg: { rotation: { x: 0, y: 0, z: 0 } },
-      mixamorig1RightUpLeg: { rotation: { x: 0, y: 0, z: 0 } },
+      [SKELETON_MAP.Spine]: { rotation: { x: 0, y: 0, z: 0 } },
+      [SKELETON_MAP.Spine1]: { rotation: { x: 0, y: 0, z: 0 } },
+      [SKELETON_MAP.Spine2]: { rotation: { x: 0, y: 0, z: 0 } },
+      [SKELETON_MAP.Neck]: { rotation: { x: 0, y: 0, z: 0 } },
+      [SKELETON_MAP.Head]: { rotation: { x: 0, y: 0, z: 0 } },
+      [SKELETON_MAP.LeftArm]: { rotation: { x: 0, y: 0, z: -0.2 } },
+      [SKELETON_MAP.RightArm]: { rotation: { x: 0, y: 0, z: 0.2 } },
+      [SKELETON_MAP.LeftUpLeg]: { rotation: { x: 0, y: 0, z: 0 } },
+      [SKELETON_MAP.RightUpLeg]: { rotation: { x: 0, y: 0, z: 0 } },
     },
   },
 
@@ -41,27 +42,27 @@ export const POSE_LIBRARY: Record<string, Pose> = {
     name: 'Balance Right',
     description: 'Standing on right foot, left leg raised',
     bones: {
-      mixamorig1Spine: { rotation: { x: 0.1, y: -0.1, z: -0.05 } },
-      mixamorig1Spine1: { rotation: { x: 0.05, y: 0, z: 0 } },
-      mixamorig1Spine2: { rotation: { x: 0.05, y: 0, z: 0 } },
-      mixamorig1Neck: { rotation: { x: -0.1, y: 0.05, z: 0 } },
-      mixamorig1Head: { rotation: { x: 0, y: 0, z: 0.05 } },
+      [SKELETON_MAP.Spine]: { rotation: { x: 0.1, y: -0.1, z: -0.05 } },
+      [SKELETON_MAP.Spine1]: { rotation: { x: 0.05, y: 0, z: 0 } },
+      [SKELETON_MAP.Spine2]: { rotation: { x: 0.05, y: 0, z: 0 } },
+      [SKELETON_MAP.Neck]: { rotation: { x: -0.1, y: 0.05, z: 0 } },
+      [SKELETON_MAP.Head]: { rotation: { x: 0, y: 0, z: 0.05 } },
 
       // Right leg (supporting)
-      mixamorig1RightUpLeg: { rotation: { x: -0.1, y: 0, z: 0 } },
-      mixamorig1RightLeg: { rotation: { x: 0.2, y: 0, z: 0 } },
-      mixamorig1RightFoot: { rotation: { x: -0.1, y: 0, z: 0 } },
+      [SKELETON_MAP.RightUpLeg]: { rotation: { x: -0.1, y: 0, z: 0 } },
+      [SKELETON_MAP.RightLeg]: { rotation: { x: 0.2, y: 0, z: 0 } },
+      [SKELETON_MAP.RightFoot]: { rotation: { x: -0.1, y: 0, z: 0 } },
 
       // Left leg (raised)
-      mixamorig1LeftUpLeg: { rotation: { x: 1.0, y: 0.2, z: -0.3 } },
-      mixamorig1LeftLeg: { rotation: { x: -0.8, y: 0, z: 0 } },
-      mixamorig1LeftFoot: { rotation: { x: -0.2, y: 0, z: 0 } },
+      [SKELETON_MAP.LeftUpLeg]: { rotation: { x: 1.0, y: 0.2, z: -0.3 } },
+      [SKELETON_MAP.LeftLeg]: { rotation: { x: -0.8, y: 0, z: 0 } },
+      [SKELETON_MAP.LeftFoot]: { rotation: { x: -0.2, y: 0, z: 0 } },
 
       // Arms for balance
-      mixamorig1LeftArm: { rotation: { x: 0.3, y: 0, z: -0.8 } },
-      mixamorig1LeftForeArm: { rotation: { x: 0, y: 0, z: -0.5 } },
-      mixamorig1RightArm: { rotation: { x: -0.2, y: 0, z: 0.5 } },
-      mixamorig1RightForeArm: { rotation: { x: 0, y: 0, z: 0.3 } },
+      [SKELETON_MAP.LeftArm]: { rotation: { x: 0.3, y: 0, z: -0.8 } },
+      [SKELETON_MAP.LeftForeArm]: { rotation: { x: 0, y: 0, z: -0.5 } },
+      [SKELETON_MAP.RightArm]: { rotation: { x: -0.2, y: 0, z: 0.5 } },
+      [SKELETON_MAP.RightForeArm]: { rotation: { x: 0, y: 0, z: 0.3 } },
     },
   },
 
@@ -69,27 +70,27 @@ export const POSE_LIBRARY: Record<string, Pose> = {
     name: 'Balance Left',
     description: 'Standing on left foot, right leg raised',
     bones: {
-      mixamorig1Spine: { rotation: { x: 0.1, y: 0.1, z: 0.05 } },
-      mixamorig1Spine1: { rotation: { x: 0.05, y: 0, z: 0 } },
-      mixamorig1Spine2: { rotation: { x: 0.05, y: 0, z: 0 } },
-      mixamorig1Neck: { rotation: { x: -0.1, y: -0.05, z: 0 } },
-      mixamorig1Head: { rotation: { x: 0, y: 0, z: -0.05 } },
+      [SKELETON_MAP.Spine]: { rotation: { x: 0.1, y: 0.1, z: 0.05 } },
+      [SKELETON_MAP.Spine1]: { rotation: { x: 0.05, y: 0, z: 0 } },
+      [SKELETON_MAP.Spine2]: { rotation: { x: 0.05, y: 0, z: 0 } },
+      [SKELETON_MAP.Neck]: { rotation: { x: -0.1, y: -0.05, z: 0 } },
+      [SKELETON_MAP.Head]: { rotation: { x: 0, y: 0, z: -0.05 } },
 
       // Left leg (supporting)
-      mixamorig1LeftUpLeg: { rotation: { x: -0.1, y: 0, z: 0 } },
-      mixamorig1LeftLeg: { rotation: { x: 0.2, y: 0, z: 0 } },
-      mixamorig1LeftFoot: { rotation: { x: -0.1, y: 0, z: 0 } },
+      [SKELETON_MAP.LeftUpLeg]: { rotation: { x: -0.1, y: 0, z: 0 } },
+      [SKELETON_MAP.LeftLeg]: { rotation: { x: 0.2, y: 0, z: 0 } },
+      [SKELETON_MAP.LeftFoot]: { rotation: { x: -0.1, y: 0, z: 0 } },
 
       // Right leg (raised)
-      mixamorig1RightUpLeg: { rotation: { x: 1.0, y: -0.2, z: 0.3 } },
-      mixamorig1RightLeg: { rotation: { x: -0.8, y: 0, z: 0 } },
-      mixamorig1RightFoot: { rotation: { x: -0.2, y: 0, z: 0 } },
+      [SKELETON_MAP.RightUpLeg]: { rotation: { x: 1.0, y: -0.2, z: 0.3 } },
+      [SKELETON_MAP.RightLeg]: { rotation: { x: -0.8, y: 0, z: 0 } },
+      [SKELETON_MAP.RightFoot]: { rotation: { x: -0.2, y: 0, z: 0 } },
 
       // Arms for balance
-      mixamorig1RightArm: { rotation: { x: 0.3, y: 0, z: 0.8 } },
-      mixamorig1RightForeArm: { rotation: { x: 0, y: 0, z: 0.5 } },
-      mixamorig1LeftArm: { rotation: { x: -0.2, y: 0, z: -0.5 } },
-      mixamorig1LeftForeArm: { rotation: { x: 0, y: 0, z: -0.3 } },
+      [SKELETON_MAP.RightArm]: { rotation: { x: 0.3, y: 0, z: 0.8 } },
+      [SKELETON_MAP.RightForeArm]: { rotation: { x: 0, y: 0, z: 0.5 } },
+      [SKELETON_MAP.LeftArm]: { rotation: { x: -0.2, y: 0, z: -0.5 } },
+      [SKELETON_MAP.LeftForeArm]: { rotation: { x: 0, y: 0, z: -0.3 } },
     },
   },
 
@@ -97,10 +98,10 @@ export const POSE_LIBRARY: Record<string, Pose> = {
     name: 'Arms Raised',
     description: 'Both arms raised above head',
     bones: {
-      mixamorig1LeftArm: { rotation: { x: 0, y: 0, z: -2.8 } },
-      mixamorig1LeftForeArm: { rotation: { x: 0, y: 0, z: -0.3 } },
-      mixamorig1RightArm: { rotation: { x: 0, y: 0, z: 2.8 } },
-      mixamorig1RightForeArm: { rotation: { x: 0, y: 0, z: 0.3 } },
+      [SKELETON_MAP.LeftArm]: { rotation: { x: 0, y: 0, z: -2.8 } },
+      [SKELETON_MAP.LeftForeArm]: { rotation: { x: 0, y: 0, z: -0.3 } },
+      [SKELETON_MAP.RightArm]: { rotation: { x: 0, y: 0, z: 2.8 } },
+      [SKELETON_MAP.RightForeArm]: { rotation: { x: 0, y: 0, z: 0.3 } },
     },
   },
 
@@ -108,10 +109,10 @@ export const POSE_LIBRARY: Record<string, Pose> = {
     name: 'Arms Forward',
     description: 'Both arms extended forward',
     bones: {
-      mixamorig1LeftArm: { rotation: { x: 1.57, y: 0, z: 0 } },
-      mixamorig1LeftForeArm: { rotation: { x: 0, y: 0, z: 0 } },
-      mixamorig1RightArm: { rotation: { x: 1.57, y: 0, z: 0 } },
-      mixamorig1RightForeArm: { rotation: { x: 0, y: 0, z: 0 } },
+      [SKELETON_MAP.LeftArm]: { rotation: { x: 1.57, y: 0, z: 0 } },
+      [SKELETON_MAP.LeftForeArm]: { rotation: { x: 0, y: 0, z: 0 } },
+      [SKELETON_MAP.RightArm]: { rotation: { x: 1.57, y: 0, z: 0 } },
+      [SKELETON_MAP.RightForeArm]: { rotation: { x: 0, y: 0, z: 0 } },
     },
   },
 
@@ -119,10 +120,10 @@ export const POSE_LIBRARY: Record<string, Pose> = {
     name: 'T-Pose',
     description: 'Standing with arms extended to sides',
     bones: {
-      mixamorig1LeftArm: { rotation: { x: 0, y: 0, z: -1.57 } },
-      mixamorig1LeftForeArm: { rotation: { x: 0, y: 0, z: 0 } },
-      mixamorig1RightArm: { rotation: { x: 0, y: 0, z: 1.57 } },
-      mixamorig1RightForeArm: { rotation: { x: 0, y: 0, z: 0 } },
+      [SKELETON_MAP.LeftArm]: { rotation: { x: 0, y: 0, z: -1.57 } },
+      [SKELETON_MAP.LeftForeArm]: { rotation: { x: 0, y: 0, z: 0 } },
+      [SKELETON_MAP.RightArm]: { rotation: { x: 0, y: 0, z: 1.57 } },
+      [SKELETON_MAP.RightForeArm]: { rotation: { x: 0, y: 0, z: 0 } },
     },
   },
 
@@ -130,20 +131,20 @@ export const POSE_LIBRARY: Record<string, Pose> = {
     name: 'Sitting',
     description: 'Sitting position with bent legs',
     bones: {
-      mixamorig1Spine: { rotation: { x: 0.3, y: 0, z: 0 } },
-      mixamorig1Spine1: { rotation: { x: 0.1, y: 0, z: 0 } },
-      mixamorig1Spine2: { rotation: { x: 0.1, y: 0, z: 0 } },
+      [SKELETON_MAP.Spine]: { rotation: { x: 0.3, y: 0, z: 0 } },
+      [SKELETON_MAP.Spine1]: { rotation: { x: 0.1, y: 0, z: 0 } },
+      [SKELETON_MAP.Spine2]: { rotation: { x: 0.1, y: 0, z: 0 } },
 
-      mixamorig1LeftUpLeg: { rotation: { x: 1.5, y: 0.1, z: 0 } },
-      mixamorig1LeftLeg: { rotation: { x: -1.5, y: 0, z: 0 } },
-      mixamorig1LeftFoot: { rotation: { x: 0.2, y: 0, z: 0 } },
+      [SKELETON_MAP.LeftUpLeg]: { rotation: { x: 1.5, y: 0.1, z: 0 } },
+      [SKELETON_MAP.LeftLeg]: { rotation: { x: -1.5, y: 0, z: 0 } },
+      [SKELETON_MAP.LeftFoot]: { rotation: { x: 0.2, y: 0, z: 0 } },
 
-      mixamorig1RightUpLeg: { rotation: { x: 1.5, y: -0.1, z: 0 } },
-      mixamorig1RightLeg: { rotation: { x: -1.5, y: 0, z: 0 } },
-      mixamorig1RightFoot: { rotation: { x: 0.2, y: 0, z: 0 } },
+      [SKELETON_MAP.RightUpLeg]: { rotation: { x: 1.5, y: -0.1, z: 0 } },
+      [SKELETON_MAP.RightLeg]: { rotation: { x: -1.5, y: 0, z: 0 } },
+      [SKELETON_MAP.RightFoot]: { rotation: { x: 0.2, y: 0, z: 0 } },
 
-      mixamorig1LeftArm: { rotation: { x: 0.3, y: 0, z: -0.3 } },
-      mixamorig1RightArm: { rotation: { x: 0.3, y: 0, z: 0.3 } },
+      [SKELETON_MAP.LeftArm]: { rotation: { x: 0.3, y: 0, z: -0.3 } },
+      [SKELETON_MAP.RightArm]: { rotation: { x: 0.3, y: 0, z: 0.3 } },
     },
   },
 }

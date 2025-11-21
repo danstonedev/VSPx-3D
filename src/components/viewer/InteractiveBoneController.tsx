@@ -221,6 +221,7 @@ ${formatPoseDeltas(deltas)}`);
     constraintsEnabled,
     ikRestPoseRef,
     restPoseSnapshotRef,
+    biomechState,
     onBoneSelect,
     onDragStart,
     onDragEnd,

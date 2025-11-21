@@ -7,7 +7,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import * as THREE from 'three';
-import { getConstraintForBone, getRelativeEuler, type ConstraintViolation } from '../constraints/constraintValidator';
+import { getConstraintForBone, type ConstraintViolation } from '../constraints/constraintValidator';
 import { detectCollisions, type CollisionResult } from '../constraints/selfCollisionDetector';
 import { computeBiomechAnglesForSelectedBone } from '../biomech/jointAngles';
 import type { BiomechState } from '../../../biomech/engine/biomechState';
@@ -102,16 +102,16 @@ export function RangeOfMotionPanel({
       setRomMode('bone');
     }
   }, [biomechState, romMode]);
-  
+
   // Update collision data periodically
   useEffect(() => {
     if (!skeleton) return;
-    
+
     const interval = setInterval(() => {
       const result = detectCollisions(skeleton);
       setCollisionData(result);
     }, 100); // Check every 100ms
-    
+
     return () => clearInterval(interval);
   }, [skeleton]);
 
@@ -166,7 +166,7 @@ export function RangeOfMotionPanel({
       window.clearInterval(timer);
     };
   }, [biomechState, selectedBone]);
-  
+
   // Update joint angles and utilization when bone changes
   useEffect(() => {
     if (!selectedBone) {
@@ -175,30 +175,23 @@ export function RangeOfMotionPanel({
       setLocalCoordinates(null); // Reset local coordinates when bone changes
       return;
     }
-    
+
     const constraint = getConstraintForBone(selectedBone.name);
     if (!constraint) return;
-    
+
     const updateData = () => {
       // Get anatomical angles using BIOMECH SYSTEM (segment-to-segment joint angles)
       // This provides accurate anatomical measurements using joint-relative quaternions
       const biomechData = skeleton ? computeBiomechAnglesForSelectedBone(skeleton, selectedBone) : null;
-      
+
       if (!biomechData) {
-        // Fallback: use relative Euler angles from constraint system
-        const relativeEuler = getRelativeEuler(selectedBone);
-        const displayAngles = {
-          x: THREE.MathUtils.radToDeg(relativeEuler.x),
-          y: THREE.MathUtils.radToDeg(relativeEuler.y),
-          z: THREE.MathUtils.radToDeg(relativeEuler.z),
-        };
-        setJointAngles(displayAngles);
+        setJointAngles(null);
         return;
       }
-      
+
       // Map biomech angles to display axes using helper
       const displayAngles = getDisplayAnglesFromBiomech(selectedBone.name, biomechData.angles);
-      
+
       if (viewerDebugEnabled()) {
         console.log(`🔍 ${selectedBone.name} (Biomech System):`);
         console.log(`  ${biomechData.side} ${biomechData.jointId}:`);
@@ -206,7 +199,7 @@ export function RangeOfMotionPanel({
         console.log(`    Abd/Add: ${biomechData.angles.abdAdd.toFixed(1)}°`);
         console.log(`    Rotation: ${biomechData.angles.rotation.toFixed(1)}°`);
       }
-      
+
       setJointAngles(displayAngles);
 
       // Update coordinate values if biomechState is available
@@ -228,13 +221,13 @@ export function RangeOfMotionPanel({
         }
       }
     };
-    
+
     // Initial update
     updateData();
-    
+
     // Update on animation frame
     const frameId = setInterval(updateData, 50); // 20 FPS
-    
+
     return () => clearInterval(frameId);
   }, [selectedBone]);
 
@@ -322,14 +315,14 @@ export function RangeOfMotionPanel({
       )}
     </div>
   );
-  
+
   return (
     <div className={`rom-panel ${isCollapsed ? 'collapsed' : ''}`}>
       <div className="rom-panel-header" onClick={() => setIsCollapsed(!isCollapsed)}>
         <h3>Range of Motion</h3>
         <button className="collapse-btn">{isCollapsed ? '▼' : '▲'}</button>
       </div>
-      
+
       {!isCollapsed && (
         <div className="rom-panel-content">
           <div className="rom-mode-toggle">
@@ -379,7 +372,7 @@ export function RangeOfMotionPanel({
               {coordinatePanel}
             </div>
           </div>
-          
+
           {/* Constraint Violations */}
           {normalizedViolations.length > 0 && (
             <div className="constraint-violations">
@@ -395,10 +388,10 @@ export function RangeOfMotionPanel({
               </ul>
             </div>
           )}
-          
+
           {/* Collision Summary */}
           <CollisionSummary collisionData={collisionData} />
-          
+
           {/* Controls */}
           <div className="panel-controls">
             {isInteractive ? (
@@ -408,9 +401,9 @@ export function RangeOfMotionPanel({
                     Reset Pose
                   </button>
                 )}
-                
+
                 {onToggleConstraints && (
-                  <button 
+                  <button
                     className={`control-btn ${constraintsEnabled ? 'active' : ''}`}
                     onClick={onToggleConstraints}
                   >
@@ -420,26 +413,26 @@ export function RangeOfMotionPanel({
               </>
             ) : (
               <p className="panel-note">
-                <strong>Live ROM Tracking Active</strong> - Click cyan spheres on joints to track their range of motion during animation playback. 
+                <strong>Live ROM Tracking Active</strong> - Click cyan spheres on joints to track their range of motion during animation playback.
                 Switch to IK mode to manipulate joints directly.
               </p>
             )}
           </div>
-          
+
           {/* Educational Info - Collapsible */}
           <details className="educational-info">
             <summary><h5>💡 About This System</h5></summary>
             <p className="info-text">
-              This interactive system uses <strong>Inverse Kinematics (IK)</strong> to 
-              calculate realistic joint movements. Drag any bone to see how the entire 
+              This interactive system uses <strong>Inverse Kinematics (IK)</strong> to
+              calculate realistic joint movements. Drag any bone to see how the entire
               chain responds while respecting anatomical constraints.
             </p>
             <p className="info-text">
-              <strong>Constraint utilization</strong> shows how close you are to the 
+              <strong>Constraint utilization</strong> shows how close you are to the
               joint's rotation limit. 100% means the joint is at maximum extension.
             </p>
             <p className="info-text">
-              <strong>Collision detection</strong> prevents anatomically impossible 
+              <strong>Collision detection</strong> prevents anatomically impossible
               poses by warning when limbs intersect the torso or each other.
             </p>
           </details>
@@ -454,27 +447,27 @@ export function RangeOfMotionPanel({
  */
 export function PerformanceMonitor() {
   const [fps, setFps] = useState(60);
-  
+
   useEffect(() => {
     let frameCount = 0;
     let lastTime = performance.now();
-    
+
     const updateFps = () => {
       const currentTime = performance.now();
       frameCount++;
-      
+
       if (currentTime >= lastTime + 1000) {
         setFps(Math.round((frameCount * 1000) / (currentTime - lastTime)));
         frameCount = 0;
         lastTime = currentTime;
       }
-      
+
       requestAnimationFrame(updateFps);
     };
-    
+
     updateFps();
   }, []);
-  
+
   return (
     <div className="performance-monitor">
       <div className="perf-stat">

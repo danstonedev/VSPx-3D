@@ -26,6 +26,20 @@ export const SKELETON_MAP = {
   RightForeArm: 'mixamorig1RightForeArm',
   RightHand: 'mixamorig1RightHand',
 
+  // Left Fingers
+  LeftHandThumb1: 'mixamorig1LeftHandThumb1',
+  LeftHandIndex1: 'mixamorig1LeftHandIndex1',
+  LeftHandMiddle1: 'mixamorig1LeftHandMiddle1',
+  LeftHandRing1: 'mixamorig1LeftHandRing1',
+  LeftHandPinky1: 'mixamorig1LeftHandPinky1',
+
+  // Right Fingers
+  RightHandThumb1: 'mixamorig1RightHandThumb1',
+  RightHandIndex1: 'mixamorig1RightHandIndex1',
+  RightHandMiddle1: 'mixamorig1RightHandMiddle1',
+  RightHandRing1: 'mixamorig1RightHandRing1',
+  RightHandPinky1: 'mixamorig1RightHandPinky1',
+
   // Left Leg
   LeftUpLeg: 'mixamorig1LeftUpLeg',       // Hip
   LeftLeg: 'mixamorig1LeftLeg',           // Knee

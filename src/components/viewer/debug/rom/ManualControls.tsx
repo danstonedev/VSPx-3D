@@ -1,9 +1,8 @@
 import React from 'react';
 import * as THREE from 'three';
-import { getBiomechMovementLabel } from '../../utils/jointLabels';
 import { getSegmentByBoneName } from '../../../../biomech/model/segments';
 import { getParentJoint } from '../../../../biomech/model/joints';
-import { resetBoneToRest, setRelativeEuler, validateRotation, getConstraintForBone, getLimitsFromJointDef } from '../../constraints/constraintValidator'; // @deprecated - TODO: Migrate to biomechState.computeJointState() in Phase 2
+import { resetBoneToRest, getConstraintForBone } from '../../constraints/constraintValidator';
 import type { BiomechState } from '../../../../biomech/engine/biomechState';
 
 interface ManualControlsProps {
@@ -24,39 +23,11 @@ export function ManualControls({
   biomechState,
   jointCoordinates,
   localCoordinates,
-  manualAngles,
-  setManualAngles,
   setLocalCoordinates,
   setActiveAxis
 }: ManualControlsProps) {
   const constraint = getConstraintForBone(selectedBone.name);
   if (!constraint) return null;
-  
-  const limits = getLimitsFromJointDef(constraint);
-
-  const applyManualRotation = (axis: 'x' | 'y' | 'z', degrees: number) => {
-    if (!selectedBone) return;
-    setManualAngles((prev) => {
-      const next = {
-        ...prev,
-        [axis]: degrees,
-      } as { x: number; y: number; z: number };
-
-      const euler = new THREE.Euler(
-        THREE.MathUtils.degToRad(next.x),
-        THREE.MathUtils.degToRad(next.y),
-        THREE.MathUtils.degToRad(next.z),
-        'XYZ'
-      );
-
-      setRelativeEuler(selectedBone, euler);
-      selectedBone.updateMatrixWorld(true);
-      skeleton?.bones.forEach((bone) => bone.updateMatrixWorld(true));
-      validateRotation(selectedBone); // @deprecated - TODO: Migrate to biomechState.computeJointState()
-
-      return next;
-    });
-  };
 
   const applyCoordinateChange = (coordId: string, valueDeg: number) => {
     if (!selectedBone || !biomechState || !biomechState.isCalibrated()) return;
@@ -93,7 +64,6 @@ export function ManualControls({
     resetBoneToRest(selectedBone);
     selectedBone.updateMatrixWorld(true);
     skeleton?.bones.forEach((bone) => bone.updateMatrixWorld(true));
-    setManualAngles({ x: 0, y: 0, z: 0 });
     setLocalCoordinates(null); // Clear local override on reset
   };
 
@@ -101,63 +71,47 @@ export function ManualControls({
   const joint = segment ? getParentJoint(segment.id) : null;
   const useCoordinateControls = biomechState?.isCalibrated() && joint && jointCoordinates;
 
+  if (!useCoordinateControls || !joint) {
+    return (
+      <div className="manual-controls">
+        <h5>Manual Joint Probe</h5>
+        <div className="local-override-warning">
+          ⚠️ Biomechanics Engine not calibrated or joint not mapped.
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="manual-controls">
       <h5>Manual Joint Probe</h5>
-      {useCoordinateControls && joint ? (
-        <>
-          {localCoordinates && (
-            <div className="local-override-warning">
-              ⚠️ Local Override Active - Sliders are driving the model directly
-            </div>
-          )}
-          <p className="control-mode-label">
-            Mode: Coordinate Control ({joint.displayName})
-          </p>
-          {joint.coordinates.map(coord => (
-            <label key={coord.id} className="manual-row">
-              <span className="axis truncated" title={coord.displayName}>
-                {coord.displayName}:
-              </span>
-              <input
-                type="range"
-                min={THREE.MathUtils.radToDeg(coord.range.min)}
-                max={THREE.MathUtils.radToDeg(coord.range.max)}
-                step={1}
-                value={localCoordinates?.[coord.id] ?? jointCoordinates?.[coord.id] ?? 0}
-                onChange={(event) => applyCoordinateChange(coord.id, Number(event.target.value))}
-                onPointerDown={() => setActiveAxis(coord.id)}
-                onPointerUp={() => setActiveAxis(null)}
-                onPointerLeave={() => setActiveAxis(null)}
-              />
-              <span className="manual-value">{(localCoordinates?.[coord.id] ?? jointCoordinates?.[coord.id] ?? 0).toFixed(1)}°</span>
-            </label>
-          ))}
-        </>
-      ) : (
-        <>
-          <p className="control-mode-label">
-            Mode: Bone Rotation (Euler)
-          </p>
-          {(['x', 'y', 'z'] as const).map((axis) => (
-            <label key={axis} className="manual-row">
-              <span className="axis">{getBiomechMovementLabel(selectedBone.name, axis)}:</span>
-              <input
-                type="range"
-                min={THREE.MathUtils.radToDeg(limits[axis][0])}
-                max={THREE.MathUtils.radToDeg(limits[axis][1])}
-                step={0.5}
-                value={manualAngles[axis] ?? 0}
-                onChange={(event) => applyManualRotation(axis, Number(event.target.value))}
-                onPointerDown={() => setActiveAxis(axis)}
-                onPointerUp={() => setActiveAxis(null)}
-                onPointerLeave={() => setActiveAxis(null)}
-              />
-              <span className="manual-value">{(manualAngles[axis] ?? 0).toFixed(1)}°</span>
-            </label>
-          ))}
-        </>
+      {localCoordinates && (
+        <div className="local-override-warning">
+          ⚠️ Local Override Active - Sliders are driving the model directly
+        </div>
       )}
+      <p className="control-mode-label">
+        Mode: Coordinate Control ({joint.displayName})
+      </p>
+      {joint.coordinates.map(coord => (
+        <label key={coord.id} className="manual-row">
+          <span className="axis truncated" title={coord.displayName}>
+            {coord.displayName}:
+          </span>
+          <input
+            type="range"
+            min={THREE.MathUtils.radToDeg(coord.range.min)}
+            max={THREE.MathUtils.radToDeg(coord.range.max)}
+            step={1}
+            value={localCoordinates?.[coord.id] ?? jointCoordinates?.[coord.id] ?? 0}
+            onChange={(event) => applyCoordinateChange(coord.id, Number(event.target.value))}
+            onPointerDown={() => setActiveAxis(coord.id)}
+            onPointerUp={() => setActiveAxis(null)}
+            onPointerLeave={() => setActiveAxis(null)}
+          />
+          <span className="manual-value">{(localCoordinates?.[coord.id] ?? jointCoordinates?.[coord.id] ?? 0).toFixed(1)}°</span>
+        </label>
+      ))}
       <button className="control-btn" onClick={handleJointReset}>
         Reset Joint
       </button>

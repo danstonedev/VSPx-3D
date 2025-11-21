@@ -251,6 +251,7 @@ export const JOINTS: Record<string, JointDef> = {
         range: { min: 0, max: 150 * DEG_TO_RAD }, // ISB: 0-150°
         clamped: true,
         locked: false,
+        invert: true,
       },
       {
         id: 'elbow_r_pronation',
@@ -300,6 +301,7 @@ export const JOINTS: Record<string, JointDef> = {
         range: { min: 0, max: 150 * DEG_TO_RAD },
         clamped: true,
         locked: false,
+        invert: false, // Left elbow flexion is positive Z in rig
       },
       {
         id: 'elbow_l_pronation',

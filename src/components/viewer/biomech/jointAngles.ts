@@ -24,7 +24,7 @@
 import * as THREE from 'three';
 import { SKELETON_MAP } from '../utils/skeletonMap';
 
-export type JointSide = 'left' | 'right';
+export type JointSide = 'left' | 'right' | 'center';
 
 export type BiomechJointId =
   | 'hip'
@@ -32,7 +32,16 @@ export type BiomechJointId =
   | 'ankle'
   | 'shoulder'
   | 'sc'
-  | 'elbow';
+  | 'elbow'
+  | 'wrist'
+  | 'lumbar'
+  | 'thoracic'
+  | 'thoracic_upper'
+  | 'cervical'
+  | 'head'
+  | 'mtp'
+  | 'thumb_cmc'
+  | 'finger_mcp';
 
 /**
  * Biomechanically meaningful joint angles expressed in degrees.
@@ -159,7 +168,7 @@ export const JOINT_CONFIGS: JointConfig[] = [
   },
 
   // ==================== SHOULDERS (SC + GH) ====================
-  
+
   // Sternoclavicular (SC): thorax → clavicle/scapula
   // Controls the entire shoulder girdle motion
   {
@@ -218,6 +227,94 @@ export const JOINT_CONFIGS: JointConfig[] = [
     distalBoneName: SKELETON_MAP.RightForeArm,
     eulerOrder: 'ZXY',
   },
+
+  // ==================== WRISTS ====================
+  // Wrist: forearm → hand
+  // Clinical ROM:
+  // - Flexion: ~80°, Extension: ~70°
+  // - Radial Deviation: ~20°, Ulnar Deviation: ~30°
+  {
+    id: 'wrist',
+    side: 'left',
+    proximalBoneName: SKELETON_MAP.LeftForeArm,
+    distalBoneName: SKELETON_MAP.LeftHand,
+    eulerOrder: 'XYZ',
+  },
+  {
+    id: 'wrist',
+    side: 'right',
+    proximalBoneName: SKELETON_MAP.RightForeArm,
+    distalBoneName: SKELETON_MAP.RightHand,
+    eulerOrder: 'XYZ',
+  },
+
+  // ==================== SPINE ====================
+  // Spine segments mapped to Mixamo bones
+  {
+    id: 'lumbar',
+    side: 'center',
+    proximalBoneName: SKELETON_MAP.Hips, // Pelvis
+    distalBoneName: SKELETON_MAP.Spine,  // Lumbar
+    eulerOrder: 'XYZ',
+  },
+  {
+    id: 'thoracic',
+    side: 'center',
+    proximalBoneName: SKELETON_MAP.Spine, // Lumbar
+    distalBoneName: SKELETON_MAP.Spine1,  // Lower Thoracic
+    eulerOrder: 'XYZ',
+  },
+  {
+    id: 'thoracic_upper',
+    side: 'center',
+    proximalBoneName: SKELETON_MAP.Spine1, // Lower Thoracic
+    distalBoneName: SKELETON_MAP.Spine2,   // Thorax
+    eulerOrder: 'XYZ',
+  },
+  {
+    id: 'cervical',
+    side: 'center',
+    proximalBoneName: SKELETON_MAP.Spine2, // Thorax
+    distalBoneName: SKELETON_MAP.Neck,     // Neck
+    eulerOrder: 'XYZ',
+  },
+  {
+    id: 'head',
+    side: 'center',
+    proximalBoneName: SKELETON_MAP.Neck,
+    distalBoneName: SKELETON_MAP.Head,
+    eulerOrder: 'XYZ',
+  },
+
+  // ==================== TOES (MTP) ====================
+  {
+    id: 'mtp',
+    side: 'left',
+    proximalBoneName: SKELETON_MAP.LeftFoot,
+    distalBoneName: SKELETON_MAP.LeftToeBase,
+    eulerOrder: 'XYZ',
+  },
+  {
+    id: 'mtp',
+    side: 'right',
+    proximalBoneName: SKELETON_MAP.RightFoot,
+    distalBoneName: SKELETON_MAP.RightToeBase,
+    eulerOrder: 'XYZ',
+  },
+
+  // ==================== FINGERS (Right) ====================
+  { id: 'thumb_cmc', side: 'right', proximalBoneName: SKELETON_MAP.RightHand, distalBoneName: SKELETON_MAP.RightHandThumb1, eulerOrder: 'XYZ' },
+  { id: 'finger_mcp', side: 'right', proximalBoneName: SKELETON_MAP.RightHand, distalBoneName: SKELETON_MAP.RightHandIndex1, eulerOrder: 'XYZ' },
+  { id: 'finger_mcp', side: 'right', proximalBoneName: SKELETON_MAP.RightHand, distalBoneName: SKELETON_MAP.RightHandMiddle1, eulerOrder: 'XYZ' },
+  { id: 'finger_mcp', side: 'right', proximalBoneName: SKELETON_MAP.RightHand, distalBoneName: SKELETON_MAP.RightHandRing1, eulerOrder: 'XYZ' },
+  { id: 'finger_mcp', side: 'right', proximalBoneName: SKELETON_MAP.RightHand, distalBoneName: SKELETON_MAP.RightHandPinky1, eulerOrder: 'XYZ' },
+
+  // ==================== FINGERS (Left) ====================
+  { id: 'thumb_cmc', side: 'left', proximalBoneName: SKELETON_MAP.LeftHand, distalBoneName: SKELETON_MAP.LeftHandThumb1, eulerOrder: 'XYZ' },
+  { id: 'finger_mcp', side: 'left', proximalBoneName: SKELETON_MAP.LeftHand, distalBoneName: SKELETON_MAP.LeftHandIndex1, eulerOrder: 'XYZ' },
+  { id: 'finger_mcp', side: 'left', proximalBoneName: SKELETON_MAP.LeftHand, distalBoneName: SKELETON_MAP.LeftHandMiddle1, eulerOrder: 'XYZ' },
+  { id: 'finger_mcp', side: 'left', proximalBoneName: SKELETON_MAP.LeftHand, distalBoneName: SKELETON_MAP.LeftHandRing1, eulerOrder: 'XYZ' },
+  { id: 'finger_mcp', side: 'left', proximalBoneName: SKELETON_MAP.LeftHand, distalBoneName: SKELETON_MAP.LeftHandPinky1, eulerOrder: 'XYZ' },
 ];
 
 /**
@@ -313,7 +410,7 @@ export function captureJointNeutralPose(skeleton: THREE.Skeleton): void {
     const rel = computeJointRelativeQuaternion(prox, dist);
     jointNeutralRelativeQuat.set(jointKey(cfg.id, cfg.side), rel);
   }
-  
+
   console.log(`✅ Captured biomech neutral pose: ${boneNeutralWorldQuat.size} bones, ${jointNeutralRelativeQuat.size} predefined joints`);
 }
 
@@ -406,7 +503,13 @@ export function mapEulerToBiomech(
     rotation = deg(euler.x);   // X = rotation (Index 0 in ZXY)
   } else if (jointId === 'elbow') {
     // ELBOW: Flexion is Z-axis (per corrected joints.ts config)
-    flexExt = deg(euler.z);    // Z = flexion/extension
+    // Right Elbow: Flexion is -Z (requires inversion)
+    // Left Elbow: Flexion is +Z (no inversion)
+    if (side === 'right') {
+      flexExt = -deg(euler.z);
+    } else {
+      flexExt = deg(euler.z);
+    }
     abdAdd = deg(euler.y);     // Y = varus/valgus (carrying angle)
     rotation = deg(euler.x);   // X = pronation/supination
   }
@@ -419,7 +522,7 @@ export function mapEulerToBiomech(
   }
 
   // Joint-specific sign corrections to match clinical conventions
-  
+
   // KNEE: Clinical convention is extension = 0°, flexion = positive (0° to 135°)
   // But in most rigs, bending the knee produces negative rotation
   // Flip the sign so that bent knee = positive flexion angle
@@ -433,7 +536,7 @@ export function mapEulerToBiomech(
   // if (side === 'right') {
   //   abdAdd = -abdAdd;
   // }
-  
+
   // Prevent unused variable warnings while keeping parameters for future customization
   void side;
 
@@ -467,7 +570,7 @@ export function computeBiomechAnglesForConfig(
   // Subtract neutral if available
   const key = jointKey(cfg.id, cfg.side);
   const qNeutral = jointNeutralRelativeQuat.get(key);
-  
+
   if (!qNeutral) {
     // Fallback: if no neutral pose captured, assume current pose is neutral (0°)
     // This prevents crashes when UI updates before capture is complete
@@ -476,7 +579,7 @@ export function computeBiomechAnglesForConfig(
     jointNeutralRelativeQuat.set(key, currentRel);
     return mapEulerToBiomech(cfg.id, cfg.side, new THREE.Euler(0, 0, 0, cfg.eulerOrder), cfg.tPoseOffset);
   }
-  
+
   const qDelta = qNeutral.clone().invert().multiply(qRel);
 
   const euler = quaternionToJointEuler(qDelta, cfg.eulerOrder);
@@ -539,8 +642,13 @@ export function computeBiomechAnglesForSelectedBone(
  * Examples: "Left Hip", "Right Knee", "Left Shoulder"
  */
 export function getJointLabel(id: BiomechJointId, side: JointSide): string {
+  const jointLabel = id.charAt(0).toUpperCase() + id.slice(1).replace('_', ' ');
+  
+  if (side === 'center') {
+    return jointLabel;
+  }
+  
   const sideLabel = side === 'left' ? 'Left' : 'Right';
-  const jointLabel = id.charAt(0).toUpperCase() + id.slice(1);
   return `${sideLabel} ${jointLabel}`;
 }
 
